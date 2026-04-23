@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+model TRAVEL_DETAIL {
+  TID            Int                   @id(map: "PK__TRAVEL_D__C456D729C75772B4") @default(autoincrement())
+  START_POINT    String                @db.NVarChar(255)
+  END_POINT      String                @db.NVarChar(255)
+  CARBARND       String                @db.NVarChar(255)
+  REMARK         String?               @db.NVarChar(Max)
+  TIME           DateTime?             @db.Time
+  DATE           DateTime              @db.Date
+  RECORD_BY      String?               @db.VarChar(255)
+  APPROVED_BY    String?               @db.VarChar(255)
+  CREATED_AT     DateTime?             @default(now(), map: "DF__TRAVEL_DE__CREAT__2C3393D0") @db.DateTime
+  UPDATED_AT     DateTime?             @default(now(), map: "DF__TRAVEL_DE__UPDAT__2D27B809") @db.DateTime
+  is_deleted     Boolean?              @default(false, map: "DF__TRAVEL_DE__is_de__2E1BDC42")
+  deleted_at     DateTime?             @db.DateTime
+  APPROVE_STATUS String?               @default("Pending", map: "DF__TRAVEL_DE__APPRO__30F848ED") @db.NVarChar(50)
+  LOCATIONS      String?               @db.NVarChar(Max)
+  APPROVED_AT    DateTime?             @db.DateTime
+  Approve_Email  String?               @db.VarChar(255)
+  PURPOSE        String?               @db.NVarChar(255)
+  PURPOSE_TEXT   String?               @db.NVarChar(Max)
+  DEPARTMENT     String?               @db.NVarChar(255)
+  items          TRAVEL_DETAIL_ITEMS[]
+  drivers        TRAVEL_DRIVERS[]
+}
+
+model TRAVEL_DETAIL_ITEMS {
+  ITEM_ID      Int            @id(map: "PK__TRAVEL_D__ADFD89A0EA544C88") @default(autoincrement())
+  TID          Int?
+  START_POINT  String?        @db.VarChar(255)
+  END_POINT    String?        @db.VarChar(255)
+  travelDetail TRAVEL_DETAIL? @relation(fields: [TID], references: [TID], onDelete: NoAction, onUpdate: NoAction, map: "FK__TRAVEL_DETA__TID__2A4B4B5E")
+}
+
+model TRAVEL_DRIVERS {
+  DriverID     Int            @id(map: "PK__TRAVEL_D__F1B1CD24792F58E5") @default(autoincrement())
+  TID          Int?
+  DRIVER_NAME  String         @db.VarChar(255)
+  travelDetail TRAVEL_DETAIL? @relation(fields: [TID], references: [TID], onDelete: NoAction, onUpdate: NoAction, map: "FK__TRAVEL_DRIV__TID__33D4B598")
+}
+
+model TV_USERNAME {
+  ID         Int       @id(map: "PK__TV_USERN__3214EC27802B6D2B") @default(autoincrement())
+  USERNAME   String    @unique(map: "UQ__TV_USERN__B15BE12ED8C0B677") @db.NVarChar(255)
+  PASSWORD   String    @db.NVarChar(255)
+  NAME       String    @db.NVarChar(255)
+  CREATED_AT DateTime? @default(now(), map: "DF__TV_USERNA__CREAT__276EDEB3") @db.DateTime
+  IPADDRESS  String?   @db.NVarChar(50)
+  FLAG       String?   @db.NVarChar(255)
+  LASTACTION DateTime? @db.DateTime
+  EDITDATE   DateTime? @db.DateTime
+  LOGDATE    DateTime? @db.DateTime
+  DEPARTMENT String    @default("N'Unknown'", map: "DF__TV_USERNA__DEPAR__3A81B327") @db.NVarChar(255)
+  EMAIL      String?   @db.VarChar(255)
+}
+
+model TRAVEL_DETAIL_BACKUP {
+  TID         Int      @default(autoincrement())
+  START_POINT String   @db.NVarChar(255)
+  END_POINT   String   @db.NVarChar(255)
+  CARBARND    String   @db.NVarChar(255)
+  REMARK      String?  @db.NVarChar(Max)
+  TIME        DateTime @db.Time
+  DATE        DateTime @db.Date
+  RECORD_BY   String?  @db.VarChar(255)
+  APPROVED_BY String?  @db.VarChar(255)
+
+  @@ignore
+}
+
+model CAR_DETAIL {
+  CAR_ID       Int       @id(map: "PK__CAR_DETA__7D16AF24E7C55CA7") @default(autoincrement())
+  CAR_CODE     String?   @unique(map: "UQ__CAR_DETA__8860384CA399720E") @db.VarChar(50)
+  BRAND        String    @db.VarChar(100)
+  MODEL        String    @db.VarChar(100)
+  PLATE_NUMBER String    @db.VarChar(20)
+  COLOR        String?   @db.VarChar(50)
+  YEAR         Int?
+  STATUS       String?   @default("Available", map: "DF__CAR_DETAI__STATU__4E88ABD4") @db.VarChar(20)
+  IS_ACTIVE    Boolean?  @default(true, map: "DF__CAR_DETAI__IS_AC__4F7CD00D")
+  CREATED_AT   DateTime? @default(now(), map: "DF__CAR_DETAI__CREAT__5070F446") @db.DateTime
+  UPDATED_AT   DateTime? @db.DateTime
+  DELETED_AT   DateTime? @db.DateTime
+}
+
+model DRIVER_DETAIL {
+  DRIVER_ID      Int       @id(map: "PK__DRIVER_D__030E1394C90F4EE4") @default(autoincrement())
+  DRIVER_CODE    String?   @db.VarChar(50)
+  DRIVER_NAME    String    @db.VarChar(255)
+  DEPARTMENT     String?   @db.VarChar(100)
+  LICENSE_NUMBER String?   @db.VarChar(50)
+  PHONE          String?   @db.VarChar(20)
+  EMAIL          String?   @db.VarChar(255)
+  IS_ACTIVE      Boolean?  @default(true, map: "DF__DRIVER_DE__IS_AC__49C3F6B7")
+  CREATED_AT     DateTime? @default(now(), map: "DF__DRIVER_DE__CREAT__4AB81AF0") @db.DateTime
+  UPDATED_AT     DateTime? @db.DateTime
+  DELETED_AT     DateTime? @db.DateTime
+}
