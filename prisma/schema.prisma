@@ -60,6 +60,8 @@ model TV_USERNAME {
   LOGDATE    DateTime? @db.DateTime
   DEPARTMENT String    @default("N'Unknown'", map: "DF__TV_USERNA__DEPAR__3A81B327") @db.NVarChar(255)
   EMAIL      String?   @db.VarChar(255)
+  IS_ACTIVE  Boolean?  @default(true, map: "DF_TV_USERNAME_IS_ACTIVE")
+  DELETED_AT DateTime? @db.DateTime
 }
 
 model TRAVEL_DETAIL_BACKUP {

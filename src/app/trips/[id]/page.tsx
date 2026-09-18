@@ -140,7 +140,7 @@ const TripDetailsContent = () => {
               {data.trip.APPROVE_STATUS === 'Pending' && (
                 <Button
                   variant="outline"
-                  className="flex items-center gap-2 bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100"
+                  className="flex items-center gap-2"
                   onClick={() => data.setShowEmailDialog(true)}
                 >
                   <Send className="w-4 h-4" />
@@ -167,11 +167,11 @@ const TripDetailsContent = () => {
         {/* ข้อความสำเร็จของแอ็กชันต่าง ๆ */}
         {data.actionSuccess && (
           <motion.div variants={itemVariants}>
-            <Alert className="border border-green-200 bg-green-50 dark:bg-green-900/20">
-              <AlertTitle className="font-medium text-green-800 dark:text-green-300">
+            <Alert className="border-success/20 bg-success/10">
+              <AlertTitle className="font-medium text-success">
                 ดำเนินการสำเร็จ
               </AlertTitle>
-              <AlertDescription className="text-green-700 dark:text-green-400">
+              <AlertDescription className="text-success">
                 {data.actionSuccess}
               </AlertDescription>
             </Alert>
@@ -191,9 +191,9 @@ const TripDetailsContent = () => {
         {/* ข้อมูลทริปหลัก */}
         <motion.div variants={itemVariants}>
           <Card>
-            <CardHeader className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+            <CardHeader className="border-b border-border">
               <CardTitle className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <FileText className="w-5 h-5 text-primary" />
                 ข้อมูลทริป
               </CardTitle>
             </CardHeader>
@@ -233,7 +233,9 @@ const TripDetailsContent = () => {
             <div>
               <p className="font-bold mb-4">ลงชื่อผู้ขอใช้รถ:</p>
               <div className="border-b border-gray-300 mt-8 pt-4"></div>
-              <p className="mt-2">({data.trip.RECORD_BY_NAME || data.trip.RECORD_BY || 'ไม่ระบุ'})</p>
+              <p className="mt-2">
+                ({data.trip.RECORD_BY_NAME || data.trip.RECORD_BY || 'ไม่ระบุ'})
+              </p>
               <p className="text-sm text-gray-500">
                 วันที่: ........./........./.........
               </p>

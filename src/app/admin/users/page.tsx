@@ -7,7 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { fetchWithAuth } from '@/lib/api';
 import {
   PlusCircle,
-  Trash,
+  Power,
   Edit,
   Search,
   Loader2,
@@ -71,6 +71,22 @@ export default function UserManagementPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Edit user state
+  const [editingUser, setEditingUser] = useState<DatabaseUser | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editDepartment, setEditDepartment] = useState('');
+  const [editPassword, setEditPassword] = useState('');
+  const [editError, setEditError] = useState<string | null>(null);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+
+  // Delete user state
+  const [deletingUser, setDeletingUser] = useState<DatabaseUser | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   // Load users and departments
   useEffect(() => {
     const loadData = async () => {
@@ -101,22 +117,19 @@ export default function UserManagementPage() {
   if (user && user.department !== 'MIS') {
     return (
       <AuthGuard>
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-          <Card className="max-w-md bg-white dark:bg-gray-800 shadow-sm rounded-xl">
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <Card className="max-w-md border-border shadow-none">
             <CardHeader>
-              <CardTitle className="text-red-600 dark:text-red-400 text-lg font-semibold">
-                Access Denied
+              <CardTitle className="text-destructive text-lg font-semibold">
+                ไม่มีสิทธิ์เข้าถึง
               </CardTitle>
-              <CardDescription className="text-gray-500 dark:text-gray-400">
-                Only MIS department members can access user management.
+              <CardDescription>
+                เฉพาะแผนก MIS เท่านั้นที่สามารถจัดการผู้ใช้งานได้
               </CardDescription>
             </CardHeader>
             <CardFooter>
-              <Button
-                asChild
-                className="bg-blue-600 text-white hover:bg-blue-700 rounded-md"
-              >
-                <Link href="/dashboard">Return to Dashboard</Link>
+              <Button asChild>
+                <Link href="/dashboard">กลับไปแดชบอร์ด</Link>
               </Button>
             </CardFooter>
           </Card>
@@ -138,6 +151,87 @@ export default function UserManagementPage() {
       field.includes(searchQuery.toLowerCase())
     );
   });
+
+  // Open edit dialog
+  const openEditDialog = (dbUser: DatabaseUser) => {
+    setEditingUser(dbUser);
+    setEditName(dbUser.NAME);
+    setEditEmail(dbUser.EMAIL || '');
+    setEditDepartment(dbUser.DEPARTMENT);
+    setEditPassword('');
+    setEditError(null);
+    setIsEditDialogOpen(true);
+  };
+
+  // Handle edit user submission
+  const handleEditUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    setEditError(null);
+    setIsEditSubmitting(true);
+    try {
+      const body: Record<string, string> = {
+        NAME: editName,
+        DEPARTMENT: editDepartment,
+      };
+      if (editEmail) body.EMAIL = editEmail;
+      if (editPassword) body.PASSWORD = editPassword;
+
+      await fetchWithAuth(`/api/users/${editingUser.ID}`, {
+        method: 'PUT',
+        body: JSON.stringify(body),
+      });
+
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.ID === editingUser.ID
+            ? {
+                ...u,
+                NAME: editName,
+                EMAIL: editEmail || null,
+                DEPARTMENT: editDepartment,
+              }
+            : u
+        )
+      );
+      setIsEditDialogOpen(false);
+      setEditingUser(null);
+    } catch (err) {
+      setEditError(
+        err instanceof Error ? err.message : 'Failed to update user'
+      );
+    } finally {
+      setIsEditSubmitting(false);
+    }
+  };
+
+  // Open delete dialog
+  const openDeleteDialog = (dbUser: DatabaseUser) => {
+    setDeletingUser(dbUser);
+    setDeleteError(null);
+    setIsDeleteDialogOpen(true);
+  };
+
+  // Handle delete user
+  const handleDeleteUser = async () => {
+    if (!deletingUser) return;
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      await fetchWithAuth(`/api/users/${deletingUser.ID}`, {
+        method: 'DELETE',
+      });
+      setUsers((prev) => prev.filter((u) => u.ID !== deletingUser.ID));
+      setIsDeleteDialogOpen(false);
+      setDeletingUser(null);
+    } catch (err) {
+      setDeleteError(
+        err instanceof Error ? err.message : 'Failed to delete user'
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   // Handle form submission
   const handleCreateUser = async (e: React.FormEvent) => {
@@ -175,12 +269,10 @@ export default function UserManagementPage() {
   if (loading) {
     return (
       <AuthGuard>
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="min-h-screen bg-background flex items-center justify-center">
           <div className="flex flex-col items-center gap-4">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-            <p className="text-gray-900 dark:text-white">
-              Loading user data...
-            </p>
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-foreground">กำลังโหลดข้อมูลผู้ใช้งาน...</p>
           </div>
         </div>
       </AuthGuard>
@@ -191,26 +283,21 @@ export default function UserManagementPage() {
   if (error) {
     return (
       <AuthGuard>
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+        <div className="min-h-screen bg-background p-6">
           <div className="max-w-4xl mx-auto">
-            <Card className="bg-white dark:bg-gray-800 shadow-sm rounded-xl">
+            <Card className="border-border shadow-none">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
-                  <AlertTriangle className="text-red-600 dark:text-red-400" />
-                  Error Loading Users
+                <CardTitle className="flex items-center gap-2 text-lg font-semibold text-foreground">
+                  <AlertTriangle className="text-destructive h-5 w-5" />
+                  โหลดข้อมูลผู้ใช้งานไม่สำเร็จ
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-red-600 dark:text-red-400 text-sm">
-                  {error}
-                </p>
+                <p className="text-destructive text-sm">{error}</p>
               </CardContent>
               <CardFooter>
-                <Button
-                  onClick={() => window.location.reload()}
-                  className="bg-blue-600 text-white hover:bg-blue-700 rounded-md"
-                >
-                  Try Again
+                <Button onClick={() => window.location.reload()}>
+                  ลองอีกครั้ง
                 </Button>
               </CardFooter>
             </Card>
@@ -228,25 +315,20 @@ export default function UserManagementPage() {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-background">
         {/* Header */}
-        <header className="bg-blue-900 text-white shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex items-center justify-between animate-fade-in">
+        <header className="bg-card border-b border-border">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-semibold text-white">
-                User Management
+              <h1 className="text-xl font-semibold text-foreground">
+                จัดการผู้ใช้งาน
               </h1>
-              <p className="text-sm text-gray-300">
-                Manage system users (MIS department only)
+              <p className="text-sm text-muted-foreground">
+                จัดการผู้ใช้งานระบบ (เฉพาะแผนก MIS)
               </p>
             </div>
-            <Button
-              asChild
-              variant="secondary"
-              size="sm"
-              className="bg-white text-blue-900 hover:bg-gray-100 rounded-md"
-            >
-              <Link href="/dashboard">Dashboard</Link>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/dashboard">แดชบอร์ด</Link>
             </Button>
           </div>
         </header>
@@ -255,124 +337,90 @@ export default function UserManagementPage() {
           {/* Search & actions */}
           <div className="flex flex-col sm:flex-row gap-4 justify-between">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
-                placeholder="Search users..."
+                placeholder="ค้นหาผู้ใช้งาน..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="pl-10"
               />
             </div>
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="bg-blue-600 text-white hover:bg-blue-700 rounded-md">
+                <Button>
                   <PlusCircle className="mr-2 h-4 w-4" />
-                  Add User
+                  เพิ่มผู้ใช้งาน
                 </Button>
               </DialogTrigger>
-              <DialogContent className="bg-white dark:bg-gray-800 rounded-xl">
+              <DialogContent>
                 <DialogHeader>
-                  <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-white">
-                    Create New User
-                  </DialogTitle>
-                  <DialogDescription className="text-gray-500 dark:text-gray-400">
-                    Add a new user to the system. They can log in with these
-                    credentials.
+                  <DialogTitle>สร้างผู้ใช้งานใหม่</DialogTitle>
+                  <DialogDescription>
+                    เพิ่มผู้ใช้งานใหม่เข้าระบบ
+                    ผู้ใช้สามารถเข้าสู่ระบบด้วยข้อมูลนี้ได้
                   </DialogDescription>
                 </DialogHeader>
 
                 <form onSubmit={handleCreateUser} className="space-y-4 py-4">
                   {formError && (
-                    <div className="p-3 text-sm bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-600 dark:text-red-300 rounded-md">
+                    <div className="p-3 text-sm bg-destructive/10 border border-destructive/20 text-destructive rounded-md">
                       {formError}
                     </div>
                   )}
 
                   <div className="space-y-2">
-                    <Label
-                      htmlFor="username"
-                      className="text-sm font-medium text-gray-900 dark:text-white"
-                    >
-                      Username *
-                    </Label>
+                    <Label htmlFor="username">ชื่อผู้ใช้ *</Label>
                     <Input
                       id="username"
                       value={newUsername}
                       onChange={(e) => setNewUsername(e.target.value)}
                       required
-                      className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label
-                      htmlFor="password"
-                      className="text-sm font-medium text-gray-900 dark:text-white"
-                    >
-                      Password *
-                    </Label>
+                    <Label htmlFor="password">รหัสผ่าน *</Label>
                     <Input
                       id="password"
                       type="password"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       required
-                      className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label
-                      htmlFor="name"
-                      className="text-sm font-medium text-gray-900 dark:text-white"
-                    >
-                      Full Name *
-                    </Label>
+                    <Label htmlFor="name">ชื่อ-นามสกุล *</Label>
                     <Input
                       id="name"
                       value={newName}
                       onChange={(e) => setNewName(e.target.value)}
                       required
-                      className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label
-                      htmlFor="email"
-                      className="text-sm font-medium text-gray-900 dark:text-white"
-                    >
-                      Email
-                    </Label>
+                    <Label htmlFor="email">อีเมล</Label>
                     <Input
                       id="email"
                       type="email"
                       value={newEmail}
                       onChange={(e) => setNewEmail(e.target.value)}
-                      className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label
-                      htmlFor="department"
-                      className="text-sm font-medium text-gray-900 dark:text-white"
-                    >
-                      Department *
-                    </Label>
+                    <Label htmlFor="department">แผนก *</Label>
                     <Select
                       value={newDepartment}
                       onValueChange={setNewDepartment}
                       required
                     >
-                      <SelectTrigger
-                        id="department"
-                        className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <SelectValue placeholder="Select department" />
+                      <SelectTrigger id="department">
+                        <SelectValue placeholder="เลือกแผนก" />
                       </SelectTrigger>
-                      <SelectContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600">
+                      <SelectContent>
                         {departments.map((dept) => (
                           <SelectItem key={dept} value={dept}>
                             {dept}
@@ -387,22 +435,17 @@ export default function UserManagementPage() {
                       type="button"
                       variant="outline"
                       onClick={() => setIsDialogOpen(false)}
-                      className="border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
                     >
-                      Cancel
+                      ยกเลิก
                     </Button>
-                    <Button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 rounded-md"
-                    >
+                    <Button type="submit" disabled={isSubmitting}>
                       {isSubmitting ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Creating...
+                          กำลังสร้าง...
                         </>
                       ) : (
-                        'Create User'
+                        'สร้างผู้ใช้งาน'
                       )}
                     </Button>
                   </DialogFooter>
@@ -412,40 +455,40 @@ export default function UserManagementPage() {
           </div>
 
           {/* Users table */}
-          <Card className="bg-white dark:bg-gray-800 shadow-sm rounded-xl">
+          <Card className="border-border shadow-none">
             <CardHeader>
-              <CardTitle className="text-lg font-medium text-gray-900 dark:text-white">
-                System Users
+              <CardTitle className="text-lg font-medium text-foreground">
+                ผู้ใช้งานทั้งหมด
               </CardTitle>
-              <CardDescription className="text-gray-500 dark:text-gray-400">
-                {filteredUsers.length} users found
+              <CardDescription>
+                พบผู้ใช้งาน {filteredUsers.length} คน
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">
-                        Username
+                    <tr className="border-b border-border">
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        ชื่อผู้ใช้
                       </th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">
-                        Name
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        ชื่อ-นามสกุล
                       </th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">
-                        Email
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        อีเมล
                       </th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">
-                        Department
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        แผนก
                       </th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">
-                        Created
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        วันที่สร้าง
                       </th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">
-                        Last Login
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        เข้าใช้งานล่าสุด
                       </th>
-                      <th className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400">
-                        Actions
+                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        จัดการ
                       </th>
                     </tr>
                   </thead>
@@ -454,51 +497,53 @@ export default function UserManagementPage() {
                       <tr>
                         <td
                           colSpan={7}
-                          className="px-4 py-8 text-center text-gray-500 dark:text-gray-400"
+                          className="px-4 py-8 text-center text-muted-foreground"
                         >
-                          No users found
+                          ไม่พบผู้ใช้งาน
                         </td>
                       </tr>
                     ) : (
                       filteredUsers.map((user) => (
                         <tr
                           key={user.ID}
-                          className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+                          className="border-b border-border last:border-none hover:bg-muted/50"
                         >
-                          <td className="px-4 py-3 text-gray-900 dark:text-white">
+                          <td className="px-4 py-3 text-foreground">
                             {user.USERNAME}
                           </td>
-                          <td className="px-4 py-3 text-gray-900 dark:text-white">
+                          <td className="px-4 py-3 text-foreground">
                             {user.NAME}
                           </td>
-                          <td className="px-4 py-3 text-gray-900 dark:text-white">
+                          <td className="px-4 py-3 text-foreground">
                             {user.EMAIL || '-'}
                           </td>
-                          <td className="px-4 py-3 text-gray-900 dark:text-white">
+                          <td className="px-4 py-3 text-foreground">
                             {user.DEPARTMENT}
                           </td>
-                          <td className="px-4 py-3 text-gray-900 dark:text-white">
+                          <td className="px-4 py-3 text-foreground">
                             {formatDate(user.CREATED_AT)}
                           </td>
-                          <td className="px-4 py-3 text-gray-900 dark:text-white">
+                          <td className="px-4 py-3 text-foreground">
                             {formatDate(user.LASTACTION)}
                           </td>
-                          <td className="px-4 py-3 text-right space-x-2">
+                          <td className="px-4 py-3 text-right space-x-1">
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+                              className="text-muted-foreground hover:text-foreground"
+                              onClick={() => openEditDialog(user)}
                             >
                               <Edit className="h-4 w-4" />
-                              <span className="sr-only">Edit</span>
+                              <span className="sr-only">แก้ไข</span>
                             </Button>
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+                              className="text-muted-foreground hover:text-destructive"
+                              onClick={() => openDeleteDialog(user)}
                             >
-                              <Trash className="h-4 w-4" />
-                              <span className="sr-only">Delete</span>
+                              <Power className="h-4 w-4" />
+                              <span className="sr-only">ปิดการใช้งาน</span>
                             </Button>
                           </td>
                         </tr>
@@ -512,22 +557,140 @@ export default function UserManagementPage() {
         </main>
       </div>
 
-      {/* CSS for animations */}
-      <style jsx global>{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(8px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .animate-fade-in {
-          animation: fadeIn 0.3s ease-out;
-        }
-      `}</style>
+      {/* Edit User Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>แก้ไขผู้ใช้งาน: {editingUser?.USERNAME}</DialogTitle>
+            <DialogDescription>
+              อัปเดตข้อมูลผู้ใช้งาน เว้นว่างช่องรหัสผ่านหากไม่ต้องการเปลี่ยน
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleEditUser} className="space-y-4 py-4">
+            {editError && (
+              <div className="p-3 text-sm bg-destructive/10 border border-destructive/20 text-destructive rounded-md">
+                {editError}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">ชื่อ-นามสกุล *</Label>
+              <Input
+                id="edit-name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-email">อีเมล</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-department">แผนก *</Label>
+              <Select
+                value={editDepartment}
+                onValueChange={setEditDepartment}
+                required
+              >
+                <SelectTrigger id="edit-department">
+                  <SelectValue placeholder="เลือกแผนก" />
+                </SelectTrigger>
+                <SelectContent>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept} value={dept}>
+                      {dept}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-password">รหัสผ่านใหม่</Label>
+              <Input
+                id="edit-password"
+                type="password"
+                value={editPassword}
+                onChange={(e) => setEditPassword(e.target.value)}
+                placeholder="เว้นว่างหากไม่ต้องการเปลี่ยนรหัสผ่าน"
+              />
+            </div>
+
+            <DialogFooter className="pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsEditDialogOpen(false)}
+              >
+                ยกเลิก
+              </Button>
+              <Button type="submit" disabled={isEditSubmitting}>
+                {isEditSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    กำลังบันทึก...
+                  </>
+                ) : (
+                  'บันทึกการเปลี่ยนแปลง'
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Deactivate Confirm Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>ปิดการใช้งานผู้ใช้งาน</DialogTitle>
+            <DialogDescription>
+              ต้องการปิดการใช้งานของ{' '}
+              <strong className="text-foreground">{deletingUser?.NAME}</strong>{' '}
+              ({deletingUser?.USERNAME}) ใช่หรือไม่?
+              ผู้ใช้จะไม่สามารถเข้าสู่ระบบได้อีก จนกว่าจะเปิดการใช้งานใหม่
+            </DialogDescription>
+          </DialogHeader>
+
+          {deleteError && (
+            <div className="p-3 text-sm bg-destructive/10 border border-destructive/20 text-destructive rounded-md">
+              {deleteError}
+            </div>
+          )}
+
+          <DialogFooter className="pt-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+            >
+              ยกเลิก
+            </Button>
+            <Button
+              onClick={handleDeleteUser}
+              disabled={isDeleting}
+              variant="destructive"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  กำลังปิดการใช้งาน...
+                </>
+              ) : (
+                'ปิดการใช้งาน'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AuthGuard>
   );
 }

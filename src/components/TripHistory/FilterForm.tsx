@@ -75,15 +75,15 @@ export const FilterForm: React.FC<FilterFormProps> = ({
   const variants: Variants = {
     hidden: {
       opacity: 0,
-      height: 0
+      height: 0,
     },
     visible: {
       opacity: 1,
       height: 'auto',
       transition: {
         duration: 0.3,
-        type: "tween" as const,
-        ease: "easeInOut",
+        type: 'tween' as const,
+        ease: 'easeInOut',
       },
     },
   };
@@ -121,10 +121,7 @@ export const FilterForm: React.FC<FilterFormProps> = ({
         key={index}
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="flex items-center bg-blue-50 dark:bg-blue-900/30 
-        text-blue-700 dark:text-blue-300 
-        px-2 py-1 rounded-full text-xs mr-2 mb-2 
-        hover:bg-blue-100 dark:hover:bg-blue-900/50 cursor-pointer"
+        className="flex items-center bg-primary/10 text-primary px-2 py-1 rounded-full text-xs mr-2 mb-2 hover:bg-primary/15 cursor-pointer"
         onClick={tag.onRemove}
       >
         {tag.icon}
@@ -138,19 +135,17 @@ export const FilterForm: React.FC<FilterFormProps> = ({
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="bg-white dark:bg-gray-900 rounded-2xl shadow-lg p-4"
+      className="bg-card border border-border rounded-lg p-4"
     >
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
-          ตัวกรอง
-        </h2>
+        <h2 className="text-lg font-semibold text-foreground">ตัวกรอง</h2>
         <div className="flex items-center space-x-2">
           <Button
             variant="ghost"
             size="sm"
             onClick={onClearFilters}
-            className="text-gray-500 hover:text-red-500"
+            className="text-muted-foreground hover:text-destructive"
           >
             <X className="mr-2 h-4 w-4" /> ล้างทั้งหมด
           </Button>
@@ -158,7 +153,7 @@ export const FilterForm: React.FC<FilterFormProps> = ({
             variant="outline"
             size="sm"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="text-gray-600 dark:text-gray-300"
+            className="text-muted-foreground"
           >
             <Filter className="mr-2 h-4 w-4" />
             ตัวกรอง
@@ -203,18 +198,15 @@ export const FilterForm: React.FC<FilterFormProps> = ({
                 placeholder="ค้นหาทริป…"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-gray-50 dark:bg-gray-800"
+                className="pl-10"
               />
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
             </div>
 
             {/* Car Brand Combobox */}
             <Popover>
               <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="justify-between bg-gray-50 dark:bg-gray-800"
-                >
+                <Button variant="outline" className="justify-between">
                   <Car className="mr-2 h-4 w-4" />
                   {carBrandFilter === 'all_vehicles'
                     ? 'ทุกยี่ห้อรถ'
@@ -252,10 +244,7 @@ export const FilterForm: React.FC<FilterFormProps> = ({
             {/* Status */}
             <Popover>
               <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="justify-between bg-gray-50 dark:bg-gray-800"
-                >
+                <Button variant="outline" className="justify-between">
                   <CheckCircle className="mr-2 h-4 w-4" />
                   {statusFilter === 'all_status' ? 'ทุกสถานะ' : statusFilter}
                   <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
@@ -298,10 +287,7 @@ export const FilterForm: React.FC<FilterFormProps> = ({
             {/* Department */}
             <Popover>
               <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="justify-between bg-gray-50 dark:bg-gray-800"
-                >
+                <Button variant="outline" className="justify-between">
                   <Users className="mr-2 h-4 w-4" />
                   {departmentFilter === 'all_departments'
                     ? 'ทุกแผนก'
@@ -339,35 +325,32 @@ export const FilterForm: React.FC<FilterFormProps> = ({
             {/* Date Range */}
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-xs mb-1 text-gray-600 dark:text-gray-400">
+                <label className="block text-xs mb-1 text-muted-foreground">
                   วันที่เริ่มต้น
                 </label>
                 <Input
                   type="date"
                   value={startDateFilter}
                   onChange={(e) => setStartDateFilter(e.target.value)}
-                  className="bg-gray-50 dark:bg-gray-800"
+                  className=""
                 />
               </div>
               <div>
-                <label className="block text-xs mb-1 text-gray-600 dark:text-gray-400">
+                <label className="block text-xs mb-1 text-muted-foreground">
                   วันที่สิ้นสุด
                 </label>
                 <Input
                   type="date"
                   value={endDateFilter}
                   onChange={(e) => setEndDateFilter(e.target.value)}
-                  className="bg-gray-50 dark:bg-gray-800"
+                  className=""
                 />
               </div>
             </div>
 
             {/* Submit Button */}
             <div className="col-span-full flex justify-end">
-              <Button
-                type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-              >
+              <Button type="submit" className="">
                 <Filter className="mr-2 h-4 w-4" />
                 ใช้ตัวกรอง
               </Button>

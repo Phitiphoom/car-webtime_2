@@ -33,9 +33,9 @@ export function DriversList({ drivers }: DriversListProps) {
 
   return (
     <Card className="overflow-hidden">
-      <CardHeader className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      <CardHeader className="border-b border-border">
         <CardTitle className="flex items-center gap-2">
-          <User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <User className="w-5 h-5 text-primary" />
           รายชื่อคนขับ
         </CardTitle>
       </CardHeader>
@@ -50,12 +50,12 @@ export function DriversList({ drivers }: DriversListProps) {
             <motion.li
               key={d.DRIVER_ID}
               variants={itemVariants}
-              className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-100 dark:border-gray-800"
+              className="flex items-center gap-3 bg-muted/40 p-3 rounded-lg border border-border"
             >
-              <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-blue-600 dark:text-blue-400">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
                 {index + 1}
               </div>
-              <span className="font-medium text-gray-800 dark:text-gray-200">
+              <span className="font-medium text-foreground">
                 {d.DRIVER_NAME}
               </span>
             </motion.li>

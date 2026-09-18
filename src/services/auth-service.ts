@@ -64,11 +64,17 @@ export class AuthService {
           NAME: true,
           EMAIL: true,
           DEPARTMENT: true,
+          IS_ACTIVE: true,
         },
       });
 
       if (!row) {
         console.log(`User not found: ${username}`);
+        return null;
+      }
+
+      if (row.IS_ACTIVE === false) {
+        console.log(`User is deactivated: ${username}`);
         return null;
       }
 

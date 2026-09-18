@@ -111,3 +111,46 @@ export async function PUT(
     return handleError(err);
   }
 }
+
+/* ------------------------------ DELETE ------------------------------------ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const auth = await verifyJwtMiddleware(request);
+    if (!auth.isAuthenticated) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const { id } = await params;
+    const tripId = Number(id);
+    if (Number.isNaN(tripId)) {
+      return NextResponse.json({ error: 'Invalid trip id' }, { status: 400 });
+    }
+
+    const trip = await prisma.tRAVEL_DETAIL.findUnique({
+      where: { TID: tripId },
+    });
+    if (!trip || trip.is_deleted) {
+      return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
+    }
+
+    await prisma.tRAVEL_DETAIL.update({
+      where: { TID: tripId },
+      data: {
+        is_deleted: true,
+        deleted_at: new Date(),
+        UPDATED_AT: new Date(),
+      },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error('DELETE /api/trips/[id] error:', err);
+    return handleError(err);
+  }
+}

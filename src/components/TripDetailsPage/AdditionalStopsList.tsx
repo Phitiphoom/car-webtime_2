@@ -38,9 +38,9 @@ export function AdditionalStopsList({
 
   return (
     <Card className={`overflow-hidden ${className}`}>
-      <CardHeader className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      <CardHeader className="border-b border-border">
         <CardTitle className="flex items-center gap-2">
-          <MapPin className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <MapPin className="w-5 h-5 text-primary" />
           จุดแวะเพิ่มเติม
         </CardTitle>
       </CardHeader>
@@ -62,17 +62,17 @@ export function AdditionalStopsList({
                 key={key}
                 role="listitem"
                 variants={itemVariants}
-                className={`flex items-center gap-2 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-100 dark:border-gray-800 ${itemClassName}`}
+                className={`flex items-center gap-2 bg-muted/40 p-3 rounded-lg border border-border ${itemClassName}`}
               >
-                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 text-xs font-medium">
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-medium">
                   {idx + 1}
                 </span>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-medium text-gray-800 dark:text-gray-200">
+                  <span className="font-medium text-foreground">
                     {startPoint}
                   </span>
-                  <ArrowRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                  <span className="font-medium text-gray-800 dark:text-gray-200">
+                  <ArrowRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <span className="font-medium text-foreground">
                     {endPoint}
                   </span>
                 </div>

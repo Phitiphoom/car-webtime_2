@@ -56,11 +56,13 @@ The application uses Prisma with SQL Server and manages:
 
 ### Authentication & Authorization
 
-- JWT-based authentication with role-based access control
-- LDAP integration for user verification
-- Middleware protects routes: `/dashboard`, `/log-usage`, `/trips`, `/admin`
-- Admin routes require `role: "admin"` in JWT payload
-- Token stored in `carWebtime_token` cookie
+There are two independent auth checks on the same token, not one shared layer:
+
+- **Edge middleware** (`src/middleware.ts`) verifies the `carWebtime_token` cookie with `jose` and gates page routes (`/dashboard`, `/log-usage`, `/trips`, `/admin`) at the routing layer. It explicitly skips `/api/*` — API auth is left entirely to the route handlers.
+- **API routes** call `verifyJwtMiddleware()` (`src/lib/auth-middleware.ts`), which verifies via `JWTService` (`src/services/jwt-service.ts`, using `jsonwebtoken`) and expects the token as a `Bearer` header, not the cookie. The client sends it this way via `fetchWithAuth()` (`src/lib/api.ts`), which reads the same token out of `localStorage`.
+- **Role is not a stored field.** `TV_USERNAME` has no role column. `mapRole()` (`src/lib/auth-middleware.ts`) derives `admin` / `approver` / `user` from `TV_USERNAME.DEPARTMENT` (via a hardcoded department allowlist/alias table) at login time, and the result is embedded in the JWT. On every subsequent API request, `verifyJwtMiddleware` re-derives the role from the DB department rather than trusting `payload.role` — but the page-level Edge middleware *does* trust `payload.role` directly for gating `/admin`. Keep this in sync if you change how departments map to roles.
+- LDAP (`ldapjs`) is the primary credential check, via `AuthService.authenticate()` → `authenticateWithLDAP()` (`src/lib/ldap-auth.ts`, config in `src/lib/ldap-config.ts`).
+- `src/middleware/rate-limit.ts` implements in-memory IP rate limiting but is currently **not wired into `src/middleware.ts`** — it exists but has no effect until imported and called there.
 
 ### Path Aliases
 
@@ -79,7 +81,7 @@ Uses shadcn/ui with:
 
 - Server runs on port 4020 (both dev and production, configurable via `PORT` env var)
 - Database URL configured via `DATABASE_URL` environment variable
-- JWT secret configured via `SECRET_KEY` environment variable
+- JWT signing configured via `JWT_SECRET` (access tokens, 30m expiry) and `JWT_REFRESH_SECRET` (refresh tokens, 7d expiry) — both silently fall back to insecure defaults if unset, so always set them
 - LDAP authentication configured via `LDAP_URL`, `LDAP_BASE_DNS`, and `LDAP_BASE` env vars
 - Email notifications configured via `EMAIL_*` environment variables (SMTP settings)
 - Application URLs configured via `NEXT_PUBLIC_APP_URL` and `NEXT_PUBLIC_API_BASE_URL`

@@ -234,9 +234,7 @@ export function PendingApprovals() {
         <div className="flex items-start gap-3">
           <Map className="h-5 w-5 text-muted-foreground mt-1 shrink-0" />
           <div>
-            <p className="text-xs text-muted-foreground mb-1">
-              เส้นทาง
-            </p>
+            <p className="text-xs text-muted-foreground mb-1">เส้นทาง</p>
             <div className="flex items-center gap-2 text-sm font-medium text-foreground">
               <span className="truncate max-w-[120px]">{trip.START_POINT}</span>
               <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -249,9 +247,7 @@ export function PendingApprovals() {
         <div className="flex items-start gap-3">
           <User className="h-5 w-5 text-muted-foreground mt-1 shrink-0" />
           <div>
-            <p className="text-xs text-muted-foreground mb-1">
-              ผู้ขอใช้รถ
-            </p>
+            <p className="text-xs text-muted-foreground mb-1">ผู้ขอใช้รถ</p>
             <p className="text-sm font-medium text-foreground truncate">
               {trip.RECORD_BY_NAME || trip.RECORD_BY || 'ไม่ระบุ'}
             </p>
@@ -386,7 +382,7 @@ export function PendingApprovals() {
             size="sm"
             onClick={() => handleApprove(trip.TID)}
             disabled={actionLoading[trip.TID]}
-            className="bg-green-600 hover:bg-green-700 text-primary-foreground"
+            className="bg-success hover:bg-success/90 text-success-foreground"
           >
             {actionLoading[trip.TID] ? (
               <RefreshCw className="h-4 w-4 mr-1.5 animate-spin" />
@@ -420,10 +416,10 @@ export function PendingApprovals() {
   /* ------------------------------------------------------------ */
   if (loading && !refreshing)
     return (
-      <Card className="overflow-hidden border border-gray-200 dark:border-gray-700 shadow-md">
-        <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b border-border">
-          <CardTitle className="flex items-center gap-2 text-primary">
-            <ClipboardCheck className="h-5 w-5" />
+      <Card className="overflow-hidden border-border shadow-none">
+        <CardHeader className="border-b border-border">
+          <CardTitle className="flex items-center gap-2 text-foreground">
+            <ClipboardCheck className="h-5 w-5 text-primary" />
             <span>ทริปรออนุมัติ</span>
           </CardTitle>
           <CardDescription>กำลังโหลดข้อมูล…</CardDescription>
@@ -457,10 +453,10 @@ export function PendingApprovals() {
   /* ------------------------------------------------------------ */
   if (error)
     return (
-      <Card className="overflow-hidden border border-gray-200 dark:border-gray-700 shadow-md">
-        <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b border-border">
-          <CardTitle className="flex items-center gap-2 text-primary">
-            <ClipboardCheck className="h-5 w-5" />
+      <Card className="overflow-hidden border-border shadow-none">
+        <CardHeader className="border-b border-border">
+          <CardTitle className="flex items-center gap-2 text-foreground">
+            <ClipboardCheck className="h-5 w-5 text-primary" />
             <span>ทริปรออนุมัติ</span>
           </CardTitle>
           <CardDescription>ไม่สามารถโหลดข้อมูลได้</CardDescription>
@@ -491,11 +487,11 @@ export function PendingApprovals() {
   /* ------------------------------------------------------------ */
   if (pendingTrips.length === 0)
     return (
-      <Card className="overflow-hidden border border-gray-200 dark:border-gray-700 shadow-md">
-        <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b border-border">
+      <Card className="overflow-hidden border-border shadow-none">
+        <CardHeader className="border-b border-border">
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-primary">
-              <ClipboardCheck className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-foreground">
+              <ClipboardCheck className="h-5 w-5 text-primary" />
               <span>ทริปรออนุมัติ</span>
             </CardTitle>
             <Button
@@ -531,7 +527,7 @@ export function PendingApprovals() {
   /*  Main Render                                                */
   /* ------------------------------------------------------------ */
   return (
-    <Card className="overflow-hidden border border-border shadow-md relative">
+    <Card className="overflow-hidden border-border shadow-none relative">
       {/* Mobile Menu */}
       {renderMobileMenu()}
 
@@ -563,12 +559,12 @@ export function PendingApprovals() {
       </AnimatePresence>
 
       {/* Card Header with Responsive Layout */}
-      <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-b border-gray-200 dark:border-gray-700">
+      <CardHeader className="border-b border-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <ClipboardCheck className="h-5 w-5 text-primary" />
             <div>
-              <CardTitle className="text-primary text-lg">
+              <CardTitle className="text-foreground text-lg">
                 ทริปรออนุมัติ
               </CardTitle>
               <CardDescription className="mt-1">
@@ -621,11 +617,7 @@ export function PendingApprovals() {
           {pendingTrips.length} รายการรออนุมัติ
         </p>
         <Link href="/dashboard">
-          <Button
-            variant="link"
-            size="sm"
-            className="h-8 text-primary"
-          >
+          <Button variant="link" size="sm" className="h-8 text-primary">
             ดูทริปทั้งหมด
           </Button>
         </Link>

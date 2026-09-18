@@ -51,8 +51,8 @@ export function StatsSection() {
     /* ---------- สถานะ error ---------- */
     if (error) {
       return (
-        <Card className="bg-white dark:bg-gray-800 border-gray-200 shadow-sm rounded-xl">
-          <CardContent className="p-6 text-red-600 dark:text-red-400">
+        <Card className="border-border shadow-none">
+          <CardContent className="p-6 text-destructive">
             ไม่สามารถโหลดสถิติได้: {error}
           </CardContent>
         </Card>
@@ -124,7 +124,7 @@ export function StatsSection() {
     <section className="space-y-6">
       {user?.role === 'admin' && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
+          <h2 className="text-lg font-semibold text-foreground">
             สถิติการเดินทาง
           </h2>
 
@@ -132,20 +132,14 @@ export function StatsSection() {
           <Tabs
             value={period}
             onValueChange={(v: string) => setPeriod(v as StatsPeriod)}
-            className="bg-gray-100 dark:bg-gray-700 rounded-md p-1"
+            className="bg-muted rounded-md p-1"
           >
             <TabsList className="grid grid-cols-4 w-full sm:w-auto">
               {(['day', 'week', 'month', 'year'] as const).map((p) => (
                 <TabsTrigger
                   key={p}
                   value={p}
-                  className="
-                    rounded-md
-                    data-[state=active]:bg-white
-                    data-[state=active]:text-blue-600
-                    dark:data-[state=active]:bg-gray-800
-                    dark:data-[state=active]:text-white
-                  "
+                  className="rounded-sm data-[state=active]:bg-background data-[state=active]:text-foreground"
                 >
                   {p === 'day'
                     ? '24 ชม.'

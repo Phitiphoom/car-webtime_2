@@ -51,11 +51,12 @@ export default function LogUsagePage() {
 
   // หลังแก้: ไม่บังคับผู้อนุมัติเพิ่มเติม
   const isVehicleStepValid =
-  !!form.details.carBrand &&
-  !!form.details.date &&
-  !!form.details.department &&
-  // ถ้าเลือก "อื่น ๆ" ต้องกรอก purposeText ด้วย
-  (form.details.purpose !== 'อื่น ๆ' || form.details.purposeText.trim() !== '');
+    !!form.details.carBrand &&
+    !!form.details.date &&
+    !!form.details.department &&
+    // ถ้าเลือก "อื่น ๆ" ต้องกรอก purposeText ด้วย
+    (form.details.purpose !== 'อื่น ๆ' ||
+      form.details.purposeText.trim() !== '');
 
   const isDriversStepValid = form.useCustomDriver
     ? form.details.otherDriverName.trim() !== ''
@@ -77,28 +78,28 @@ export default function LogUsagePage() {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-background">
         {/* หน้า Header */}
-        <header className="bg-gradient-to-r from-blue-300 via-blue-400 to-indigo-300 text-gray-800 shadow">
+        <header className="bg-card border-b border-border">
           <div className="max-w-7xl mx-auto px-4 py-6 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Link
                 href="/dashboard"
-                className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+                className="p-2 rounded-full hover:bg-muted transition-colors"
                 aria-label="ย้อนกลับไปแดชบอร์ด"
               >
-                <ChevronLeft className="w-5 h-5" />
+                <ChevronLeft className="w-5 h-5 text-foreground" />
               </Link>
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
                   บันทึกการใช้งานรถ
                 </h1>
-                <p className="text-sm text-black-500">
+                <p className="text-sm text-muted-foreground">
                   กรอกข้อมูลรายละเอียดการเดินทางเพื่อขออนุมัติ
                 </p>
               </div>
             </div>
-            <div className="hidden md:flex items-center gap-2 text-sm bg-white/10 rounded-full px-4 py-2">
+            <div className="hidden md:flex items-center gap-2 text-sm bg-muted rounded-full px-4 py-2 text-muted-foreground">
               <Calendar className="w-4 h-4" />
               <span>
                 {new Date().toLocaleDateString('th-TH', {
@@ -122,10 +123,7 @@ export default function LogUsagePage() {
             {/* Alert Error */}
             {form.error && (
               <motion.div variants={itemVariants}>
-                <Alert
-                  variant="destructive"
-                  className="border border-red-200 bg-red-50 dark:bg-red-900/20"
-                >
+                <Alert variant="destructive">
                   <AlertTitle className="font-medium">
                     เกิดข้อผิดพลาด
                   </AlertTitle>
@@ -136,11 +134,11 @@ export default function LogUsagePage() {
             {/* Alert Success */}
             {form.success && (
               <motion.div variants={itemVariants}>
-                <Alert className="border border-green-200 bg-green-50 dark:bg-green-900/20">
-                  <AlertTitle className="font-medium text-green-800 dark:text-green-300">
+                <Alert className="border-success/20 bg-success/10">
+                  <AlertTitle className="font-medium text-success">
                     บันทึกสำเร็จ
                   </AlertTitle>
-                  <AlertDescription className="text-green-700 dark:text-green-400">
+                  <AlertDescription className="text-success">
                     ระบบบันทึกการใช้งานรถเรียบร้อย กำลังนำคุณกลับไปยังแดชบอร์ด…
                   </AlertDescription>
                 </Alert>
@@ -149,9 +147,9 @@ export default function LogUsagePage() {
 
             {/* Card Form */}
             <motion.div variants={itemVariants}>
-              <Card className="overflow-hidden border-gray-200 dark:border-gray-700 shadow-md">
-                <CardHeader className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-                  <CardTitle className="text-xl text-gray-800 dark:text-gray-200">
+              <Card className="overflow-hidden border-border shadow-none">
+                <CardHeader className="border-b border-border">
+                  <CardTitle className="text-xl text-foreground">
                     แบบฟอร์มบันทึกการใช้งานรถ
                   </CardTitle>
                   <CardDescription>
@@ -167,8 +165,8 @@ export default function LogUsagePage() {
                     }
                     className="w-full"
                   >
-                    <div className="border-b border-gray-200 dark:border-gray-700 px-4 py-2 bg-gray-50 dark:bg-gray-800">
-                      <TabsList className="grid grid-cols-4 w-full bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
+                    <div className="border-b border-border px-4 py-2">
+                      <TabsList className="grid grid-cols-4 w-full bg-muted p-1 rounded-lg">
                         <TabsTrigger
                           value="route"
                           className="flex items-center gap-2"
@@ -231,11 +229,6 @@ export default function LogUsagePage() {
                             type="button"
                             onClick={() => setActiveTab('vehicle')}
                             disabled={!isRouteStepValid}
-                            className={`bg-blue-600 hover:bg-blue-700 ${
-                              !isRouteStepValid
-                                ? 'opacity-50 cursor-not-allowed'
-                                : ''
-                            }`}
                           >
                             ถัดไป
                           </Button>
@@ -275,11 +268,6 @@ export default function LogUsagePage() {
                             type="button"
                             onClick={() => setActiveTab('drivers')}
                             disabled={!isVehicleStepValid}
-                            className={`bg-blue-600 hover:bg-blue-700 ${
-                              !isVehicleStepValid
-                                ? 'opacity-50 cursor-not-allowed'
-                                : ''
-                            }`}
                           >
                             ถัดไป
                           </Button>
@@ -301,9 +289,9 @@ export default function LogUsagePage() {
                                   onChange={(e) =>
                                     form.setUseCustomDriver(!e.target.checked)
                                   }
-                                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary/50"
                                 />
-                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                <span className="text-sm font-medium text-foreground">
                                   เลือกคนขับจากรายชื่อ
                                 </span>
                               </label>
@@ -314,9 +302,9 @@ export default function LogUsagePage() {
                                   onChange={(e) =>
                                     form.setUseCustomDriver(e.target.checked)
                                   }
-                                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary/50"
                                 />
-                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                <span className="text-sm font-medium text-foreground">
                                   ระบุคนขับอื่นๆ
                                 </span>
                               </label>
@@ -326,7 +314,7 @@ export default function LogUsagePage() {
                               <div className="space-y-2">
                                 <label
                                   htmlFor="other-driver-name"
-                                  className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                                  className="block text-sm font-medium text-foreground"
                                 >
                                   ชื่อคนขับ *
                                 </label>
@@ -340,17 +328,17 @@ export default function LogUsagePage() {
                                     )
                                   }
                                   placeholder="กรอกชื่อคนขับ"
-                                  className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                                  className=""
                                 />
                                 {!form.details.otherDriverName.trim() && (
-                                  <p className="text-xs text-red-500 mt-1">
+                                  <p className="text-xs text-destructive mt-1">
                                     กรุณากรอกชื่อคนขับ
                                   </p>
                                 )}
                               </div>
                             ) : (
                               <div>
-                                <h3 className="text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                                <h3 className="text-sm font-medium mb-2 text-foreground">
                                   เลือกคนขับ
                                 </h3>
                                 <DriverCombobox
@@ -365,8 +353,8 @@ export default function LogUsagePage() {
                             {(form.useCustomDriver &&
                               form.details.otherDriverName) ||
                             (!form.useCustomDriver && form.details.driverId) ? (
-                              <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 p-4 border border-blue-100 dark:border-blue-800">
-                                <p className="text-sm text-blue-800 dark:text-blue-300">
+                              <div className="rounded-lg bg-muted p-4 border border-border">
+                                <p className="text-sm text-foreground">
                                   คุณได้เลือกคนขับเรียบร้อยแล้ว
                                   {form.useCustomDriver
                                     ? ` คือ "${form.details.otherDriverName}"`
@@ -388,11 +376,6 @@ export default function LogUsagePage() {
                             type="button"
                             onClick={() => setActiveTab('details')}
                             disabled={!isDriversStepValid}
-                            className={`bg-blue-600 hover:bg-blue-700 ${
-                              !isDriversStepValid
-                                ? 'opacity-50 cursor-not-allowed'
-                                : ''
-                            }`}
                           >
                             ถัดไป
                           </Button>
@@ -402,13 +385,13 @@ export default function LogUsagePage() {
                       {/* ── แท็บ 4: รายละเอียดเพิ่มเติม ─────────────────── */}
                       <TabsContent value="details" className="mt-0 space-y-6">
                         <RecordedBy user={form.user} />
-                        <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800">
+                        <Card className="">
                           <CardHeader>
-                            <CardTitle className="text-blue-900 dark:text-blue-300">
+                            <CardTitle className="text-foreground">
                               สรุปข้อมูลการเดินทาง
                             </CardTitle>
                           </CardHeader>
-                          <CardContent className="space-y-4 text-blue-800 dark:text-blue-200">
+                          <CardContent className="space-y-4 text-muted-foreground">
                             {/* สรุปข้อมูลหลัก */}
                             <div className="grid grid-cols-2 gap-4">
                               <div>
@@ -499,7 +482,7 @@ export default function LogUsagePage() {
 
             {/* ขั้นตอนแสดงด้านขวา (Desktop) */}
             <motion.div variants={itemVariants} className="hidden md:block">
-              <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm rounded-xl p-4">
+              <Card className="border-border shadow-none rounded-lg p-4">
                 <div className="flex justify-between">
                   <div className="flex items-center gap-2">
                     {['route', 'vehicle', 'drivers', 'details'].map(
@@ -513,8 +496,8 @@ export default function LogUsagePage() {
                                 'drivers',
                                 'details',
                               ].indexOf(activeTab) >= i
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-muted text-muted-foreground'
                             }`}
                           >
                             {i + 1}
@@ -528,8 +511,8 @@ export default function LogUsagePage() {
                                   'drivers',
                                   'details',
                                 ].indexOf(activeTab) > i
-                                  ? 'bg-blue-600'
-                                  : 'bg-gray-200 dark:bg-gray-700'
+                                  ? 'bg-primary'
+                                  : 'bg-muted'
                               }`}
                             />
                           )}
@@ -537,7 +520,7 @@ export default function LogUsagePage() {
                       )
                     )}
                   </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                  <div className="text-sm text-muted-foreground">
                     ขั้นตอน{' '}
                     {['route', 'vehicle', 'drivers', 'details'].indexOf(
                       activeTab

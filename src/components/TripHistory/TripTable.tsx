@@ -49,17 +49,7 @@ const TripTable = forwardRef<HTMLDivElement, TripTableProps>(
     return (
       <div ref={ref} className="relative">
         <Card
-          className="
-            bg-white
-            dark:bg-gray-900
-            border-none
-            shadow-lg
-            rounded-2xl
-            overflow-hidden
-            transition-all
-            duration-300
-            hover:shadow-xl
-          "
+          className="border-border shadow-none overflow-hidden"
           role="region"
           aria-label="ตารางทริป"
         >
@@ -70,55 +60,42 @@ const TripTable = forwardRef<HTMLDivElement, TripTableProps>(
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="
-                  absolute
-                  inset-0
-                  bg-white/70
-                  dark:bg-gray-900/70
-                  backdrop-blur-sm
-                  flex
-                  items-center
-                  justify-center
-                  z-10
-                "
+                className="absolute inset-0 bg-background/70 flex items-center justify-center z-10"
               >
                 <motion.div
                   animate={{ rotate: 360 }}
-                  transition={{ repeat: Infinity, duration: 1, type: "tween", ease: "linear" }}
+                  transition={{
+                    repeat: Infinity,
+                    duration: 1,
+                    type: 'tween',
+                    ease: 'linear',
+                  }}
                 >
-                  <RefreshCw className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
+                  <RefreshCw className="h-8 w-8 text-primary" />
                 </motion.div>
               </motion.div>
             )}
 
             {/* ---------- ตาราง ---------- */}
             <table className="w-full text-sm">
-              <thead
-                className="
-                  bg-gradient-to-r
-                  from-indigo-50
-                  to-blue-50
-                  dark:from-indigo-900
-                  dark:to-blue-900
-                "
-              >
-                <tr>
-                  <th className="px-4 sm:px-6 py-4 text-left font-semibold text-gray-800 dark:text-gray-200 rounded-tl-2xl">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     รายละเอียดทริป
                   </th>
-                  <th className="px-4 sm:px-6 py-4 text-left font-semibold text-gray-800 dark:text-gray-200">
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     รถที่ใช้
                   </th>
-                  <th className="px-4 sm:px-6 py-4 text-left font-semibold text-gray-800 dark:text-gray-200">
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     เส้นทาง
                   </th>
-                  <th className="px-4 sm:px-6 py-4 text-left font-semibold text-gray-800 dark:text-gray-200">
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     แผนก
                   </th>
-                  <th className="px-4 sm:px-6 py-4 text-left font-semibold text-gray-800 dark:text-gray-200">
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     สถานะ
                   </th>
-                  <th className="px-4 sm:px-6 py-4 text-right font-semibold text-gray-800 dark:text-gray-200 rounded-tr-2xl no-print">
+                  <th className="px-4 sm:px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground no-print">
                     จัดการ
                   </th>
                 </tr>
@@ -133,52 +110,39 @@ const TripTable = forwardRef<HTMLDivElement, TripTableProps>(
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.3 }}
-                        className="
-                          border-b
-                          border-gray-100
-                          dark:border-gray-800
-                          last:border-none
-                          hover:bg-indigo-50/50
-                          dark:hover:bg-gray-800/50
-                          transition-all
-                          duration-200
-                        "
+                        className="border-b border-border last:border-none hover:bg-muted/50 transition-colors"
                       >
                         {/* วันที่ / วัตถุประสงค์ */}
                         <td className="px-4 sm:px-6 py-4">
-                          <div className="font-medium text-gray-900 dark:text-gray-100 text-sm sm:text-base">
+                          <div className="font-medium text-foreground text-sm">
                             {formatDate(trip.DATE ?? '')}
                           </div>
-                          <div className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
+                          <div className="text-muted-foreground text-xs mt-0.5">
                             {trip.PURPOSE || '-'}
                           </div>
                         </td>
 
                         {/* รถ / ผู้บันทึก */}
                         <td className="px-4 sm:px-6 py-4">
-                          <div className="font-medium text-gray-900 dark:text-gray-100 text-sm sm:text-base">
+                          <div className="font-medium text-foreground text-sm">
                             {trip.CARBARND || 'ไม่ระบุ'}
                           </div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
-                            โดย {trip.RECORD_BY_NAME || trip.RECORD_BY || 'ไม่ระบุ'}
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            โดย{' '}
+                            {trip.RECORD_BY_NAME || trip.RECORD_BY || 'ไม่ระบุ'}
                           </div>
                         </td>
 
                         {/* เส้นทาง */}
                         <td
-                          className="
-                                px-4 sm:px-6 py-4 whitespace-nowrap
-                                font-medium text-gray-900 dark:text-gray-100
-                                max-w-[12rem]   /* กำหนดกรอบความกว้าง */
-                                truncate         /* ตัดคำเกินด้วย … */
-                              "
+                          className="px-4 sm:px-6 py-4 whitespace-nowrap font-medium text-foreground text-sm max-w-[12rem] truncate"
                           title={`${trip.START_POINT} → ${trip.END_POINT}`} /* hover ดูเต็ม ๆ ได้ */
                         >
                           {trip.START_POINT} → {trip.END_POINT}
                         </td>
 
                         {/* แผนก */}
-                        <td className="px-4 sm:px-6 py-4 font-medium text-gray-900 dark:text-gray-100 text-sm sm:text-base">
+                        <td className="px-4 sm:px-6 py-4 font-medium text-foreground text-sm">
                           {trip.DEPARTMENT || 'ไม่ระบุ'}
                         </td>
 
@@ -186,20 +150,13 @@ const TripTable = forwardRef<HTMLDivElement, TripTableProps>(
                         <td className="px-4 sm:px-6 py-4">
                           <Badge
                             variant={badge.variant}
-                            className={`
-                              font-medium
-                              py-1
-                              px-2
-                              rounded-full
-                              shadow-sm
-                              ${
-                                badge.variant === 'secondary'
-                                  ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200'
-                                  : badge.variant === 'destructive'
-                                    ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200'
-                                    : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200'
-                              }
-                            `}
+                            className={`font-medium py-1 px-2 rounded-full ${
+                              badge.variant === 'secondary'
+                                ? 'bg-success/10 text-success'
+                                : badge.variant === 'destructive'
+                                  ? 'bg-destructive/10 text-destructive'
+                                  : 'bg-warning/10 text-warning-foreground'
+                            }`}
                           >
                             <span className="mr-1">{badge.icon}</span>
                             {trip.APPROVE_STATUS || 'Pending'}
@@ -213,10 +170,7 @@ const TripTable = forwardRef<HTMLDivElement, TripTableProps>(
                               variant="ghost"
                               size="icon"
                               aria-label="ดูรายละเอียด"
-                              className="
-                                text-indigo-600 dark:text-indigo-400
-                                hover:bg-indigo-100/60 dark:hover:bg-gray-800
-                              "
+                              className="text-muted-foreground hover:text-foreground hover:bg-muted"
                               title="ดูรายละเอียด"
                             >
                               <Eye className="h-4 w-4" />
@@ -230,10 +184,7 @@ const TripTable = forwardRef<HTMLDivElement, TripTableProps>(
                                 variant="ghost"
                                 size="icon"
                                 aria-label="แก้ไข"
-                                className="
-                                  text-indigo-600 dark:text-indigo-400
-                                  hover:bg-indigo-100/60 dark:hover:bg-gray-800
-                                "
+                                className="text-muted-foreground hover:text-foreground hover:bg-muted"
                                 title="แก้ไข"
                               >
                                 <Pencil className="h-4 w-4" />
@@ -248,7 +199,7 @@ const TripTable = forwardRef<HTMLDivElement, TripTableProps>(
                   <tr>
                     <td
                       colSpan={6}
-                      className="py-12 text-center text-gray-500 dark:text-gray-400 text-base"
+                      className="py-12 text-center text-muted-foreground text-base"
                     >
                       ไม่พบข้อมูลทริป
                     </td>

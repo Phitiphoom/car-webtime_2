@@ -11,16 +11,16 @@ export function FormActions({ loading }: { loading: boolean }) {
     <Card className="border-none shadow-none">
       <CardFooter className="justify-end gap-4">
         <Button variant="outline" asChild>
-          <Link href="/dashboard">Cancel</Link>
+          <Link href="/dashboard">ยกเลิก</Link>
         </Button>
         <Button type="submit" disabled={loading}>
           {loading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              บันทึก...
+              กำลังบันทึก...
             </>
           ) : (
-            'Submit Trip'
+            'ส่งคำขออนุมัติ'
           )}
         </Button>
       </CardFooter>

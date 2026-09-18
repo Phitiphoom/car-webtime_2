@@ -38,6 +38,9 @@ export class UserService {
 
       let user = found;
       if (user) {
+        if (user.IS_ACTIVE === false) {
+          throw new Error('User account has been deactivated');
+        }
         // 3. อัปเดตกรณี user มีอยู่แล้ว
         const updated = await prisma.tV_USERNAME.update({
           where: { ID: user.ID },

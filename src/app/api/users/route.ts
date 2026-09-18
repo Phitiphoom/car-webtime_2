@@ -6,6 +6,7 @@ import { hash } from 'bcrypt';
 export async function GET() {
   try {
     const users = await prisma.tV_USERNAME.findMany({
+      where: { IS_ACTIVE: true },
       select: {
         ID: true,
         USERNAME: true,

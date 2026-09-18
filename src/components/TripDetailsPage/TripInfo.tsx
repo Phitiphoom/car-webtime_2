@@ -55,48 +55,48 @@ export function TripInfo({ trip }: { trip: Trip }) {
   const rows = [
     {
       label: 'วันที่ / เวลา',
-      icon: <Calendar className="text-blue-600 dark:text-blue-400" />,
+      icon: <Calendar className="text-primary" />,
       value: `${fmtDate(trip.DATE)} ${fmtTime(trip.TIME)}`,
     },
     {
       label: 'รถที่ใช้',
-      icon: <Car className="text-blue-600 dark:text-blue-400" />,
+      icon: <Car className="text-primary" />,
       value: trip.CARBARND,
     },
     {
       label: 'เส้นทาง',
-      icon: <MapPin className="text-blue-600 dark:text-blue-400" />,
+      icon: <MapPin className="text-primary" />,
       value: (
         <div className="flex items-center gap-2">
           <span className="font-medium">{trip.START_POINT}</span>
-          <ArrowRight className="w-4 h-4 text-gray-400" />
+          <ArrowRight className="w-4 h-4 text-muted-foreground" />
           <span className="font-medium">{trip.END_POINT}</span>
         </div>
       ),
     },
     {
       label: 'วัตถุประสงค์',
-      icon: <Briefcase className="text-blue-600 dark:text-blue-400" />,
+      icon: <Briefcase className="text-primary" />,
       value: trip.PURPOSE || '—',
     },
     {
       label: 'แผนก',
-      icon: <User className="text-blue-600 dark:text-blue-400" />,
+      icon: <User className="text-primary" />,
       value: trip.DEPARTMENT || '—',
     },
     {
       label: 'ผู้อนุมัติ',
-      icon: <Mail className="text-blue-600 dark:text-blue-400" />,
+      icon: <Mail className="text-primary" />,
       value: trip.Approve_Email || '—',
     },
     {
       label: 'หมายเหตุ',
-      icon: <FileText className="text-blue-600 dark:text-blue-400" />,
+      icon: <FileText className="text-primary" />,
       value: trip.REMARK || '—',
     },
     {
       label: 'สร้างเมื่อ',
-      icon: <Clock className="text-blue-600 dark:text-blue-400" />,
+      icon: <Clock className="text-primary" />,
       value: trip.CREATED_AT
         ? fmtDate(trip.CREATED_AT) + ' ' + fmtTime(trip.CREATED_AT)
         : '—',
@@ -114,23 +114,19 @@ export function TripInfo({ trip }: { trip: Trip }) {
       {rows.map((r) => (
         <motion.div
           key={r.label}
-          className="p-4 flex gap-2 items-start hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+          className="p-4 flex gap-2 items-start hover:bg-muted/50 transition-colors"
           variants={itemVariants}
         >
           {/* ไอคอน */}
-          <div className="mt-1 w-8 h-8 flex items-center justify-center rounded-full bg-blue-50 dark:bg-blue-900/30">
+          <div className="mt-1 w-8 h-8 flex items-center justify-center rounded-full bg-primary/10">
             {r.icon}
           </div>
 
           {/* ป้ายกำกับ */}
-          <dt className="font-medium w-40 text-gray-800 dark:text-gray-200 pt-1.5">
-            {r.label}
-          </dt>
+          <dt className="font-medium w-40 text-foreground pt-1.5">{r.label}</dt>
 
           {/* ค่า */}
-          <dd className="text-gray-700 dark:text-gray-300 flex-1 pt-1.5">
-            {r.value}
-          </dd>
+          <dd className="text-muted-foreground flex-1 pt-1.5">{r.value}</dd>
         </motion.div>
       ))}
     </motion.dl>

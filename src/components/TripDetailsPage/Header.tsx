@@ -35,32 +35,33 @@ export function Header({
   onReject: () => void;
   onSend: () => void;
   onPrint?: () => void;
-}) 
-
-{
+}) {
   useEffect(() => {
-  console.log('🧭 Trip data:', trip);
-}, [trip]);
+    console.log('🧭 Trip data:', trip);
+  }, [trip]);
   return (
-    <div className="bg-gradient-to-r from-blue-200 via-blue-100 to-indigo-200 text-gray-800 p-5 rounded-b-lg shadow-sm">
+    <div className="bg-card border-b border-border p-5">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Link
             href="/dashboard"
-            className="p-2 rounded-full bg-white/50 hover:bg-white/70 transition-colors hidden sm:flex"
+            className="p-2 rounded-full hover:bg-muted transition-colors hidden sm:flex"
             aria-label="ย้อนกลับไปแดชบอร์ด"
           >
-            <ChevronLeft className="w-5 h-5 text-gray-800" />
+            <ChevronLeft className="w-5 h-5 text-foreground" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold mb-1">
+            <h1 className="text-xl font-bold mb-1 text-foreground">
               รายละเอียดทริป #{trip.TID}
             </h1>
-            <p className="text-sm flex items-center gap-2">
+            <p className="text-sm flex items-center gap-2 text-muted-foreground">
               <span>
-                บันทึกโดย: <strong>{trip.RECORD_BY_NAME || trip.RECORD_BY || 'ไม่ระบุ'}</strong>
+                บันทึกโดย:{' '}
+                <strong className="text-foreground">
+                  {trip.RECORD_BY_NAME || trip.RECORD_BY || 'ไม่ระบุ'}
+                </strong>
               </span>
-              <span className="bg-white/70 px-2 py-0.5 rounded-full text-xs border border-gray-300 text-gray-700">
+              <span className="bg-muted px-2 py-0.5 rounded-full text-xs border border-border text-muted-foreground">
                 {trip.DEPARTMENT || 'ไม่ระบุแผนก'}
               </span>
             </p>
@@ -74,7 +75,7 @@ export function Header({
                 type="button"
                 onClick={onEdit}
                 size="sm"
-                className="bg-blue-300 hover:bg-blue-400 text-gray-800 border border-blue-400"
+                variant="outline"
               >
                 <Pencil className="mr-2 h-4 w-4" />
                 แก้ไข
@@ -83,7 +84,8 @@ export function Header({
                 type="button"
                 onClick={onDelete}
                 size="sm"
-                className="bg-red-300 hover:bg-red-400 text-gray-800 border border-red-400"
+                variant="outline"
+                className="text-destructive border-destructive/30 hover:bg-destructive/10"
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 ลบ
@@ -97,7 +99,7 @@ export function Header({
                 type="button"
                 onClick={onApprove}
                 size="sm"
-                className="bg-green-300 hover:bg-green-400 text-gray-800 border border-green-400"
+                className="bg-success hover:bg-success/90 text-success-foreground"
               >
                 <Check className="mr-2 h-4 w-4" />
                 อนุมัติ
@@ -106,7 +108,8 @@ export function Header({
                 type="button"
                 onClick={onReject}
                 size="sm"
-                className="bg-red-300 hover:bg-red-400 text-gray-800 border border-red-400"
+                variant="outline"
+                className="text-destructive border-destructive/30 hover:bg-destructive/10"
               >
                 <X className="mr-2 h-4 w-4" />
                 ปฏิเสธ
@@ -115,25 +118,15 @@ export function Header({
           )}
 
           {trip.APPROVE_STATUS === 'Pending' && (
-            <Button
-              type="button"
-              onClick={onSend}
-              size="sm"
-              className="bg-indigo-300 hover:bg-indigo-400 text-gray-800 border border-indigo-400"
-            >
+            <Button type="button" onClick={onSend} size="sm">
               <Send className="mr-2 h-4 w-4" />
               ส่งคำขอ
             </Button>
           )}
 
           {onPrint && (
-            <Button
-              type="button"
-              onClick={onPrint}
-              size="sm"
-              className="bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-300"
-            >
-              <Printer className="mr-2 h-4 w-4 text-gray-600" />
+            <Button type="button" onClick={onPrint} size="sm" variant="outline">
+              <Printer className="mr-2 h-4 w-4" />
               พิมพ์
             </Button>
           )}

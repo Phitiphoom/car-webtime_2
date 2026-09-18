@@ -30,7 +30,7 @@ export function AdditionalStops({ stops, onAdd, onRemove, onChange }: Props) {
           onClick={onAdd}
           variant="ghost"
           size="sm"
-          className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+          className="text-primary hover:text-primary hover:bg-primary/10"
         >
           <PlusCircle className="h-4 w-4 mr-1" />
           เพิ่มจุดแวะ
@@ -38,7 +38,7 @@ export function AdditionalStops({ stops, onAdd, onRemove, onChange }: Props) {
       </CardHeader>
       <CardContent className="space-y-4">
         {stops.length === 0 ? (
-          <div className="text-center py-4 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 rounded-md">
+          <div className="text-center py-4 text-muted-foreground bg-muted rounded-md">
             ยังไม่มีจุดแวะเพิ่มเติม คลิกที่ &quot;เพิ่มจุดแวะ&quot;
             เพื่อเพิ่มจุดแวะใหม่
           </div>
@@ -46,7 +46,7 @@ export function AdditionalStops({ stops, onAdd, onRemove, onChange }: Props) {
           stops.map((s, i) => (
             <div
               key={i}
-              className="grid sm:grid-cols-2 gap-4 items-end border border-gray-100 dark:border-gray-700 p-3 rounded-md bg-gray-50 dark:bg-gray-800 relative"
+              className="grid sm:grid-cols-2 gap-4 items-end border border-border p-3 rounded-md bg-muted/40 relative"
             >
               <div>
                 <Label htmlFor={`start-${i}`}>จุดเริ่มต้น</Label>
@@ -70,7 +70,7 @@ export function AdditionalStops({ stops, onAdd, onRemove, onChange }: Props) {
                   variant="ghost"
                   size="sm"
                   onClick={() => onRemove(i)}
-                  className="absolute -top-1 -right-1 h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full"
+                  className="absolute -top-1 -right-1 h-6 w-6 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 rounded-full"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>

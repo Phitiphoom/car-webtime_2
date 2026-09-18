@@ -100,7 +100,7 @@ export async function PUT(
   }
 }
 
-// DELETE - Delete a user
+// DELETE - Soft delete a user
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> } // เปลี่ยนเป็น Promise
@@ -115,11 +115,14 @@ export async function DELETE(
     const existingUser = await prisma.tV_USERNAME.findUnique({
       where: { ID: userId },
     });
-    if (!existingUser) {
+    if (!existingUser || existingUser.DELETED_AT) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    await prisma.tV_USERNAME.delete({ where: { ID: userId } });
+    await prisma.tV_USERNAME.update({
+      where: { ID: userId },
+      data: { IS_ACTIVE: false, DELETED_AT: new Date() },
+    });
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error(`Error deleting user`, error);
