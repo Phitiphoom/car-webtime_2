@@ -4,10 +4,11 @@
 import React, { ReactNode, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { Role } from '@/server/shared/enums';
 
 type AuthGuardProps = {
   children: ReactNode;
-  requiredRole?: 'admin' | 'approver' | 'user' | undefined;
+  requiredRole?: Role | undefined;
 };
 
 export const AuthGuard: React.FC<AuthGuardProps> = ({
@@ -35,7 +36,7 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({
       if (
         requiredRole &&
         user.role !== requiredRole &&
-        !(requiredRole === 'approver' && user.role === 'admin')
+        !(requiredRole === 'APPROVER' && user.role === 'ADMIN')
       ) {
         // admin สามารถเข้าถึงทุกหน้าได้
         router.push('/dashboard');
@@ -62,7 +63,7 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({
     !user ||
     (requiredRole &&
       user.role !== requiredRole &&
-      !(requiredRole === 'approver' && user.role === 'admin'))
+      !(requiredRole === 'APPROVER' && user.role === 'ADMIN'))
   ) {
     return null;
   }

@@ -1,14 +1,11 @@
-/* -------------------------------------------------------------------------- */
-/*  File: src/components/StatsSection.tsx                                     */
-/*  ส่วนแสดงสถิติ (เฉพาะแอดมิน)                                             */
-/* -------------------------------------------------------------------------- */
+// src/components/dashboard/StatsSection.tsx
 'use client';
 
 import React from 'react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatCard } from './StatCard';
-import { useStats } from '@/hooks/useStats';
+import { useCarUsageStats } from '@/hooks/queries/useStats';
 import { useAuth } from '@/hooks/useAuth';
 import {
   CarIcon,
@@ -18,27 +15,24 @@ import {
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
-/* ประเภทข้อมูลสถิติ */
-type StatsData = {
-  totalTrips: number;
-  byStatus: { status: string; count: number }[];
-  byCarBrand: { carBrand: string; count: number }[];
-};
-
-/* ช่วงเวลา */
 type StatsPeriod = 'day' | 'week' | 'month' | 'year';
 
-export function StatsSection() {
-  const { user } = useAuth(); // ผู้ใช้ปัจจุบัน
-  const [period, setPeriod] = React.useState<StatsPeriod>('month');
-  const { stats, loading, error } = useStats('carUsage', period);
+const PERIOD_LABELS: Record<StatsPeriod, string> = {
+  day: '24 ชม.',
+  week: 'สัปดาห์',
+  month: 'เดือน',
+  year: 'ปี',
+};
 
-  /* ------------------------------------------------------------------ */
-  /*  ฟังก์ชันแสดงเนื้อหา (โหลด / error / สถิติ)                      */
-  /* ------------------------------------------------------------------ */
+export function StatsSection() {
+  const { user } = useAuth();
+  const [period, setPeriod] = React.useState<StatsPeriod>('month');
+  const { data: stats, isLoading, error } = useCarUsageStats(period);
+
+  if (user?.role !== 'ADMIN') return null;
+
   const renderContent = () => {
-    /* ---------- สถานะโหลด ---------- */
-    if (loading) {
+    if (isLoading) {
       return (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -48,37 +42,19 @@ export function StatsSection() {
       );
     }
 
-    /* ---------- สถานะ error ---------- */
-    if (error) {
+    if (error || !stats) {
       return (
         <Card className="border-border shadow-none">
           <CardContent className="p-6 text-destructive">
-            ไม่สามารถโหลดสถิติได้: {error}
+            ไม่สามารถโหลดสถิติได้
           </CardContent>
         </Card>
       );
     }
 
-    /* ---------- ไม่ใช่แอดมิน ---------- */
-    if (user?.role !== 'admin') {
-      return null;
-    }
-
-    /* ---------- แสดงสถิติ ---------- */
-    const defaultStats: StatsData = {
-      totalTrips: 0,
-      byStatus: [
-        { status: 'Pending', count: 0 },
-        { status: 'Approve', count: 0 },
-        { status: 'Rejected', count: 0 },
-      ],
-      byCarBrand: [],
-    };
-
-    const displayStats = stats || defaultStats;
     const mostUsedCar =
-      displayStats.byCarBrand?.length > 0
-        ? displayStats.byCarBrand.sort((a, b) => b.count - a.count)[0].carBrand
+      stats.byCarBrand.length > 0
+        ? [...stats.byCarBrand].sort((a, b) => b.count - a.count)[0].value
         : 'ไม่ระบุ';
 
     return (
@@ -86,25 +62,19 @@ export function StatsSection() {
         <StatCard
           icon={<CarIcon />}
           title="จำนวนทริปรวม"
-          value={displayStats.totalTrips}
+          value={stats.totalTrips}
           intent="info"
         />
         <StatCard
           icon={<ClockIcon />}
           title="รออนุมัติ"
-          value={
-            displayStats.byStatus.find((s) => s.status === 'Pending')?.count ??
-            0
-          }
+          value={stats.byStatus.find((s) => s.value === 'PENDING')?.count ?? 0}
           intent="warning"
         />
         <StatCard
           icon={<CheckCircleIcon />}
           title="อนุมัติแล้ว"
-          value={
-            displayStats.byStatus.find((s) => s.status === 'Approve')?.count ??
-            0
-          }
+          value={stats.byStatus.find((s) => s.value === 'APPROVED')?.count ?? 0}
           intent="success"
         />
         <StatCard
@@ -117,41 +87,30 @@ export function StatsSection() {
     );
   };
 
-  /* ------------------------------------------------------------------ */
-  /*  ส่วนแสดงตัวเลือกช่วงเวลา (เฉพาะแอดมิน) + เนื้อหา                */
-  /* ------------------------------------------------------------------ */
   return (
-    <section className="space-y-6">
-      {user?.role === 'admin' && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <h2 className="text-lg font-semibold text-foreground">
-            สถิติการเดินทาง
-          </h2>
+    <section className="space-y-4">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <h2 className="text-lg font-medium text-foreground">สถิติการเดินทาง</h2>
 
-          {/* ตัวเลือกช่วงเวลา */}
-          <Tabs
-            value={period}
-            onValueChange={(v: string) => setPeriod(v as StatsPeriod)}
-            className="bg-muted rounded-md p-1"
-          >
-            <TabsList className="grid grid-cols-4 w-full sm:w-auto">
-              {(['day', 'week', 'month', 'year'] as const).map((p) => (
-                <TabsTrigger
-                  key={p}
-                  value={p}
-                  className="rounded-sm data-[state=active]:bg-background data-[state=active]:text-foreground"
-                >
-                  {p === 'day'
-                    ? '24 ชม.'
-                    : p.charAt(0).toUpperCase() + p.slice(1)}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-        </div>
-      )}
+        <Tabs
+          value={period}
+          onValueChange={(v) => setPeriod(v as StatsPeriod)}
+          className="bg-muted rounded-md p-1"
+        >
+          <TabsList className="grid grid-cols-4 w-full sm:w-auto">
+            {(Object.keys(PERIOD_LABELS) as StatsPeriod[]).map((p) => (
+              <TabsTrigger
+                key={p}
+                value={p}
+                className="rounded-sm data-[state=active]:bg-background data-[state=active]:text-foreground"
+              >
+                {PERIOD_LABELS[p]}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      </div>
 
-      {/* เรนเดอร์เนื้อหา */}
       {renderContent()}
     </section>
   );

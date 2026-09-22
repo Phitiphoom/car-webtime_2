@@ -1,70 +1,43 @@
 /* -------------------------------------------------------------------------- */
 /*  File: src/components/StatCard.tsx                                         */
-/*  การ์ดแสดงสถิติ                                                             */
+/*  การ์ดสถิติ — สไตล์สมุดบัญชี: ตัวเลข mono ในกรอบกระดาษเส้นประ              */
 /* -------------------------------------------------------------------------- */
 'use client';
 
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 
 type StatCardProps = {
-  icon: React.ReactNode; // ไอคอนที่จะแสดง
-  title: string; // หัวข้อของสถิติ
-  value: React.ReactNode; // ค่าของสถิติ
-  intent: 'info' | 'warning' | 'success' | 'accent'; // โทนสี/เจตนา
+  icon: React.ReactNode;
+  title: string;
+  value: React.ReactNode;
+  intent: 'info' | 'warning' | 'success' | 'accent';
 };
 
-/* พาเล็ตสีสำหรับเจตนาแต่ละแบบ */
-const palette: Record<StatCardProps['intent'], { text: string; icon: string }> =
-  {
-    info: {
-      text: 'text-primary',
-      icon: 'bg-primary/10 text-primary',
-    },
-    warning: {
-      text: 'text-warning-foreground',
-      icon: 'bg-warning/10 text-warning-foreground',
-    },
-    success: {
-      text: 'text-success',
-      icon: 'bg-success/10 text-success',
-    },
-    accent: {
-      text: 'text-foreground',
-      icon: 'bg-muted text-muted-foreground',
-    },
-  };
+const valueTone: Record<StatCardProps['intent'], string> = {
+  info: 'text-foreground',
+  warning: 'text-warning',
+  success: 'text-success',
+  accent: 'text-foreground',
+};
 
 export function StatCard({ icon, title, value, intent }: StatCardProps) {
-  const style = palette[intent];
-
   return (
-    <Card
-      className="border-border shadow-none"
-      role="region" /* ช่วยการเข้าถึง */
-      aria-label={`การ์ดสถิติ ${title}`} /* label ภาษาไทย */
+    <div
+      className="rounded-[3px] border border-dashed border-foreground/30 bg-card p-4"
+      role="region"
+      aria-label={`การ์ดสถิติ ${title}`}
     >
-      <CardContent className="p-5">
-        <div className="flex items-center space-x-4">
-          {/* กล่องไอคอน */}
-          <div
-            className={`p-2.5 rounded-lg ${style.icon}`}
-            aria-hidden="true" /* ไม่ให้ screen reader อ่านไอคอน */
-          >
-            {icon}
-          </div>
-
-          {/* ส่วนข้อความ */}
-          <div className="flex-1">
-            <p className="text-xs font-medium text-muted-foreground mb-1">
-              {title}
-            </p>
-            <p className={`text-xl font-semibold tracking-tight ${style.text}`}>
-              {value}
-            </p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+      <div className="mb-2 flex items-center gap-1.5 text-muted-foreground">
+        <span className="[&_svg]:h-3.5 [&_svg]:w-3.5" aria-hidden="true">
+          {icon}
+        </span>
+        <p className="text-xs">{title}</p>
+      </div>
+      <p
+        className={`font-mono text-2xl font-medium tracking-tight ${valueTone[intent]}`}
+      >
+        {value}
+      </p>
+    </div>
   );
 }

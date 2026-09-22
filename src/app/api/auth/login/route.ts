@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { JWTService } from '@/services/jwt-service';
 import { handleError } from '@/utils/error-handler';
 import { AuthService } from '@/services/auth-service';
-import { mapRole } from '@/lib/auth-middleware'; // ใช้ function mapRole
+import { logger } from '@/lib/logger';
+import { SESSION_COOKIE_NAME } from '@/server/auth/guards';
 
-/* ── schema สำหรับ body ------------------------------------------------- */
+const SESSION_COOKIE_MAX_AGE_SECONDS = 60 * 30; // matches the 30m access token expiry
+
 const LoginBodySchema = z.object({
   username: z.string().trim().min(1, 'username is required'),
   password: z.string().min(1, 'password is required'),
@@ -13,57 +14,35 @@ const LoginBodySchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    // อ่าน body
-    const bodyText = await req.text();
-    let body;
-    try {
-      body = JSON.parse(bodyText);
-    } catch (e) {
-      console.error('Invalid JSON:', bodyText, e);
-      return NextResponse.json({ error: 'Invalid JSON format' }, { status: 400 });
-    }
+    const body = await req.json().catch(() => {
+      throw new z.ZodError([
+        { code: 'custom', path: [], message: 'Invalid JSON body' },
+      ]);
+    });
 
     const { username, password } = LoginBodySchema.parse(body);
 
-    // ตรวจสอบ LDAP config (ถ้าไม่ใช่ dev)
-    if (
-      process.env.NODE_ENV !== 'development' &&
-      (!process.env.LDAP_URL || !process.env.LDAP_BASE)
-    ) {
-      console.error('LDAP configuration is missing');
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
-      );
-    }
+    // Webtime/Database env vars are validated at process boot by src/env.ts —
+    // no ad-hoc check needed here (the old LDAP-only check lived here because
+    // it read process.env directly instead of the validated env module).
 
-    // authenticate ผ่าน LDAP หรือ DB
-    const authResult = await AuthService.authenticate(username, password);
+    // Role is decided entirely inside AuthService/UserService (from the DB
+    // User.role column) — the route no longer re-derives it from department.
+    const { token, user } = await AuthService.authenticate(username, password);
 
-    if (!authResult?.user?.id) {
-      return NextResponse.json(
-        { error: 'Authentication failed: Invalid username or password' },
-        { status: 401 }
-      );
-    }
-
-    // ✅ ใช้ mapRole เพื่อคำนวณ role จาก department
-    const role = mapRole(authResult.user.department || '');
-    console.log('🟦 Final mapped role:', role, 'from department:', authResult.user.department);
-
-    // ✅ สร้าง JWT token พร้อม role ที่ถูกต้อง
-    const token = await JWTService.signToken({
-      id: String(authResult.user.id),
-      name: authResult.user.name,
-      email: authResult.user.email,
-      department: authResult.user.department,
-      role,
+    // Cookie is httpOnly — client JS can never read the token (fixes the
+    // old XSS token-theft exposure from storing it in localStorage). The
+    // client relies on this cookie being sent automatically instead of
+    // building an Authorization header itself.
+    const response = NextResponse.json({ user });
+    response.cookies.set(SESSION_COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: SESSION_COOKIE_MAX_AGE_SECONDS,
     });
-
-    return NextResponse.json({
-      token,
-      user: { ...authResult.user, role, permissions: {} },
-    });
+    return response;
   } catch (err) {
     if (err instanceof z.ZodError) {
       return NextResponse.json(
@@ -72,7 +51,7 @@ export async function POST(req: Request) {
       );
     }
 
-    console.error('Login route error:', err);
+    logger.warn({ err }, 'Login route error');
     return handleError(err);
   }
 }

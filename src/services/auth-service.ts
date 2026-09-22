@@ -1,210 +1,174 @@
 // src/services/auth-service.ts
+//
+// Authenticates via a locally-stored password OR Webtime (TigerSoft HR) — this
+// replaces the old LDAP/AD path. A successful Webtime login auto-provisions a
+// local User row the same way LDAP used to (username = PersonCode, name from
+// PNT_Person, role defaults to USER — never ADMIN/APPROVER — and department is
+// left unset: departments come ONLY from the official SAP list, never from
+// Webtime, and an admin assigns one afterward). An admin can still promote the
+// role or set the department at any time via /admin/users.
 import prisma from '@/lib/prisma';
-import { LDAPService } from './ldap-service';
-import { UserService } from './user-service';
+import { compare, hash } from 'bcrypt';
+import { randomUUID } from 'crypto';
+import { WebtimeService } from './webtime-service';
 import { JWTService } from './jwt-service';
-import { hash, compare } from 'bcrypt';
-import { User } from '@/types/user';
-import { mapRole } from '@/lib/auth-middleware';
+import { Role } from '@/server/shared/enums';
+import { logger } from '@/lib/logger';
 
-/** Prisma DB user row */
-type DbUserRow = {
-  ID: number;
-  USERNAME: string;
-  PASSWORD: string;
-  NAME: string;
-  EMAIL: string | null;
-  DEPARTMENT: string | null;
-};
-
-/** LDAP/Service user row */
-type ServiceUserRow = {
+export interface AppUser {
   id: string;
+  username: string;
   name: string;
-  email?: string;
-  department?: string;
+  email: string;
+  role: Role;
+  department: string;
+}
+
+type UserRow = {
+  id: number;
+  username: string;
+  name: string;
+  email: string | null;
+  role: string;
+  department: { name: string } | null;
 };
 
-/** Union type สำหรับ response จาก DB หรือ LDAP */
-type UserRow = DbUserRow | ServiceUserRow;
+function httpError(status: number, message: string) {
+  const err = new Error(message) as Error & { status?: number };
+  err.status = status;
+  return err;
+}
 
 export class AuthService {
-  /** Authenticate via LDAP first, then DB */
+  /** Authenticate via DB first (existing local-password accounts), then Webtime. */
   static async authenticate(username: string, password: string) {
     try {
-      // 1. Database authentication
       const dbResult = await this.tryDatabaseAuthentication(username, password);
       if (dbResult) return dbResult;
 
-      // 2. LDAP authentication
-      const ldapResult = await this.tryLdapAuthentication(username, password);
-      if (ldapResult) return ldapResult;
+      const webtimeResult = await this.tryWebtimeAuthentication(
+        username,
+        password
+      );
+      if (webtimeResult) return webtimeResult;
 
       throw new Error('Invalid username or password');
     } catch (error) {
-      console.error('Authentication error:', error);
+      // A specific, intentional error (has .status) is surfaced as-is — e.g.
+      // "this account hasn't been created yet" is useful to someone who just
+      // proved their identity via Webtime. Anything else is masked to a
+      // generic message, same as before, so failed attempts don't reveal
+      // which check (username vs. password) actually failed.
+      if (error instanceof Error && (error as { status?: number }).status) {
+        throw error;
+      }
+      logger.warn({ err: error, username }, 'Authentication failed');
       throw new Error('Authentication failed');
     }
   }
 
-  /** Database authentication */
   private static async tryDatabaseAuthentication(
     username: string,
     password: string
   ) {
-    try {
-      console.log(`Database login attempt: ${username}`);
+    const row = await prisma.user.findUnique({
+      where: { username },
+      include: { department: true },
+    });
 
-      const row = await prisma.tV_USERNAME.findUnique({
-        where: { USERNAME: username },
-        select: {
-          ID: true,
-          USERNAME: true,
-          PASSWORD: true,
-          NAME: true,
-          EMAIL: true,
-          DEPARTMENT: true,
-          IS_ACTIVE: true,
-        },
-      });
+    if (!row || !row.isActive) return null;
 
-      if (!row) {
-        console.log(`User not found: ${username}`);
-        return null;
-      }
+    const passwordMatch = await compare(password, row.password);
+    if (!passwordMatch) return null;
 
-      if (row.IS_ACTIVE === false) {
-        console.log(`User is deactivated: ${username}`);
-        return null;
-      }
+    await prisma.user.update({
+      where: { id: row.id },
+      data: { logDate: new Date(), lastAction: new Date() },
+    });
 
-      const passwordMatch = await compare(password, row.PASSWORD);
-      if (!passwordMatch) {
-        console.log(`Invalid password for user: ${username}`);
-        return null;
-      }
-
-      console.log(`Successful login for user: ${username}`);
-
-      await prisma.tV_USERNAME.update({
-        where: { ID: row.ID },
-        data: {
-          LOGDATE: new Date(),
-          LASTACTION: new Date(),
-        },
-      });
-
-      return this.createUserResponse(row);
-    } catch (error) {
-      console.error('Database authentication error:', error);
-      return null;
-    }
+    return this.createUserResponse(this.toAppUser(row));
   }
 
-  /** LDAP authentication */
-  private static async tryLdapAuthentication(
+  /**
+   * Webtime (TigerSoft HR system) replaces LDAP as the second auth source.
+   * A successful check auto-provisions a local User row the first time
+   * someone logs in (see the module comment) — mirrors the old LDAP
+   * auto-provisioning, just against Webtime instead of AD.
+   */
+  private static async tryWebtimeAuthentication(
     username: string,
     password: string
   ) {
-    try {
-      const ldapUser = await LDAPService.authenticate(username, password);
-      if (!ldapUser.sAMAccountName) return null;
+    const webtimeUser = await WebtimeService.authenticate(username, password);
+    if (!webtimeUser) return null;
 
-      // Find or create in DB
-      const record = await UserService.findOrCreateUser(
-        {
-          sAMAccountName: ldapUser.sAMAccountName,
-          cn: ldapUser.cn,
-          mail: ldapUser.mail,
-          department: ldapUser.department,
+    const now = new Date();
+    const existing = await prisma.user.findUnique({
+      where: { username },
+      include: { department: true },
+    });
+
+    if (existing) {
+      if (!existing.isActive) {
+        throw httpError(403, 'บัญชีนี้ถูกปิดใช้งาน');
+      }
+
+      const updated = await prisma.user.update({
+        where: { id: existing.id },
+        // Name is refreshed from Webtime (HR is the source of truth for it);
+        // role and department are set by an admin and are never touched here.
+        data: {
+          name: webtimeUser.name || existing.name,
+          logDate: now,
+          lastAction: now,
         },
-        new Date()
-      );
-
-      return this.createUserResponse(record);
-    } catch (error) {
-      console.error('LDAP authentication error:', error);
-      return null;
-    }
-  }
-
-  /** Create user response object */
-  private static createUserResponse(row: UserRow) {
-    const id =
-      'ID' in row ? row.ID.toString() : row.id.toString();
-    const name =
-      'NAME' in row ? row.NAME : row.name;
-    const email =
-      'EMAIL' in row ? row.EMAIL ?? '' : row.email ?? '';
-
-    // ✅ เลือก department อย่างปลอดภัย
-    let department =
-      'DEPARTMENT' in row
-        ? row.DEPARTMENT || 'Unknown'
-        : row.department || 'Unknown';
-
-    // ✅ ถ้า department จาก LDAP ว่าง ให้ fallback เป็นของ DB
-    if (
-      (department === 'Unknown' || department.trim() === '') &&
-      'DEPARTMENT' in row &&
-      row.DEPARTMENT &&
-      row.DEPARTMENT !== 'Unknown'
-    ) {
-      department = row.DEPARTMENT;
+        include: { department: true },
+      });
+      return this.createUserResponse(this.toAppUser(updated));
     }
 
-    // ✅ คำนวณ role จาก department จริง
-    const role = mapRole(department);
-
-    // ✅ สร้าง JWT
-    const token = JWTService.signToken({
-      id,
-      name,
-      email,
-      role,
-      department,
-    });
-
-    const user: User = { id, name, email, role, department };
-    return { token, user };
-  }
-
-  /** Create new user (MIS only) */
-  static async createUser(
-    creatorId: string,
-    userData: {
-      username: string;
-      password: string;
-      name: string;
-      email?: string;
-      department: string;
-    }
-  ) {
-    const creator = await prisma.tV_USERNAME.findUnique({
-      where: { ID: parseInt(creatorId, 10) },
-    });
-    if (!creator || creator.DEPARTMENT.trim().toLowerCase() !== 'mis') {
-      throw new Error('Only MIS department members can create users');
-    }
-
-    const exists = await prisma.tV_USERNAME.findUnique({
-      where: { USERNAME: userData.username },
-    });
-    if (exists) throw new Error('Username already exists');
-
-    const hashed = await hash(userData.password, 10);
-    const newRow = await prisma.tV_USERNAME.create({
+    const created = await prisma.user.create({
       data: {
-        USERNAME: userData.username,
-        PASSWORD: hashed,
-        NAME: userData.name,
-        EMAIL: userData.email || null,
-        DEPARTMENT: userData.department,
-        CREATED_AT: new Date(),
-        LOGDATE: new Date(),
+        username: webtimeUser.personCode,
+        // Webtime-provisioned accounts authenticate via Webtime, never this
+        // hash — it must still be unique/unguessable per user (never a shared
+        // literal string; that was the old LDAP-provisioning bug).
+        password: await hash(randomUUID(), 10),
+        name: webtimeUser.name || webtimeUser.personCode,
+        role: 'USER', // never ADMIN/APPROVER at auto-provisioning time
+        logDate: now,
+        lastAction: now,
       },
+      include: { department: true },
+    });
+    logger.info(
+      { userId: created.id },
+      'Provisioned new user from Webtime login'
+    );
+    return this.createUserResponse(this.toAppUser(created));
+  }
+
+  private static toAppUser(row: UserRow): AppUser {
+    return {
+      id: row.id.toString(),
+      username: row.username,
+      name: row.name,
+      email: row.email ?? '',
+      role: row.role as Role,
+      department: row.department?.name ?? '',
+    };
+  }
+
+  /** Role comes straight from the DB record set when the account was
+   * created — it is never re-derived from anything at login time. */
+  private static async createUserResponse(user: AppUser) {
+    const token = await JWTService.signToken({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
     });
 
-    return this.createUserResponse(newRow);
+    return { token, user };
   }
 }

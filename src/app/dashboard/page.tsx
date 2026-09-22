@@ -1,9 +1,8 @@
 // src/app/dashboard/page.tsx
 'use client';
 
-import React from 'react';
 import { AuthGuard } from '@/components/AuthGuard';
-import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
+import { AppShell } from '@/components/layout/AppShell';
 import { StatsSection } from '@/components/dashboard/StatsSection';
 import { PendingApprovals } from '@/components/PendingApprovals';
 import { TripHistory } from '@/components/TripHistory';
@@ -11,22 +10,18 @@ import { TripHistory } from '@/components/TripHistory';
 export default function DashboardPage() {
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-background">
-        <DashboardHeader />
+      <AppShell title="แดชบอร์ด">
+        <StatsSection />
 
-        <main className="container mx-auto px-4 py-8 space-y-8">
-          <StatsSection />
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-1">
-              <PendingApprovals />
-            </div>
-            <div className="lg:col-span-2">
-              <TripHistory />
-            </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-1">
+            <PendingApprovals />
           </div>
-        </main>
-      </div>
+          <div className="lg:col-span-2">
+            <TripHistory />
+          </div>
+        </div>
+      </AppShell>
     </AuthGuard>
   );
 }

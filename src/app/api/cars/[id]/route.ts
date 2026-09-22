@@ -1,43 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import { verifyJwtMiddleware } from '@/lib/auth-middleware';
+import { requireRole } from '@/server/auth/guards';
+import { CarService } from '@/server/reference-data/car.service';
+import { handleError } from '@/utils/error-handler';
 
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await requireRole(request, ['ADMIN']);
+  if (!auth.ok) return auth.response;
+
+  const { id } = await params;
+  const carId = Number(id);
+  if (Number.isNaN(carId)) {
+    return NextResponse.json({ error: 'Invalid car id' }, { status: 400 });
+  }
+
   try {
-    const auth = await verifyJwtMiddleware(request);
-    if (!auth.isAuthenticated) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { id } = await params;
-    const carId = Number(id);
-    if (Number.isNaN(carId)) {
-      return NextResponse.json({ error: 'Invalid car id' }, { status: 400 });
-    }
-
-    const car = await prisma.cAR_DETAIL.findUnique({ where: { CAR_ID: carId } });
-    if (!car || car.DELETED_AT) {
-      return NextResponse.json({ error: 'Car not found' }, { status: 404 });
-    }
-
-    await prisma.cAR_DETAIL.update({
-      where: { CAR_ID: carId },
-      data: {
-        IS_ACTIVE: false,
-        DELETED_AT: new Date(),
-        UPDATED_AT: new Date(),
-      },
-    });
-
+    await CarService.deactivate(carId);
     return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('Error deleting car:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete car' },
-      { status: 500 }
-    );
+  } catch (err) {
+    return handleError(err);
   }
 }

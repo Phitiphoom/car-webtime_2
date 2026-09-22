@@ -4,6 +4,8 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/hooks/useAuth';
 import { ThemeProvider } from '@/components/theme-provider';
+import { QueryProvider } from '@/components/providers/query-provider';
+import { Toaster } from '@/components/ui/sonner';
 import { Suspense } from 'react';
 
 const geistSans = Geist({
@@ -21,7 +23,7 @@ export const metadata: Metadata = {
   title: 'SNC Car Reservation',
   description: 'SNC Car Reservation System',
   icons: {
-    icon: '/favicon.ico',   // default favicon
+    icon: '/favicon.ico', // default favicon
   },
 };
 
@@ -39,7 +41,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="th" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
+    <html
+      lang="th"
+      className={`${geistSans.variable} ${geistMono.variable}`}
+      suppressHydrationWarning
+    >
       <body className="bg-background text-foreground">
         <ThemeProvider
           attribute="class"
@@ -47,9 +53,12 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AuthProvider>
-            <Suspense fallback={<LoadingFallback />}>{children}</Suspense>
-          </AuthProvider>
+          <QueryProvider>
+            <AuthProvider>
+              <Suspense fallback={<LoadingFallback />}>{children}</Suspense>
+              <Toaster position="top-center" />
+            </AuthProvider>
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>

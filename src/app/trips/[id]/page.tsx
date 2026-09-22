@@ -1,314 +1,363 @@
 // src/app/trips/[id]/page.tsx
+//
+// The trip as a paper permit slip: form number, route, fields ruled with
+// dashed lines, signature blocks, and an ink stamp once it has been decided.
 'use client';
 
-import React, { useState, Suspense } from 'react';
+import { use, useState } from 'react';
+import Link from 'next/link';
+import { toast } from 'sonner';
 import { AuthGuard } from '@/components/AuthGuard';
-import { useTripDetails } from '@/hooks/useTripDetails';
-import { Header } from '@/components/TripDetailsPage/Header';
-import { StatusBanner } from '@/components/TripDetailsPage/StatusBanner';
-import { TripInfo } from '@/components/TripDetailsPage/TripInfo';
-import { AdditionalStopsList } from '@/components/TripDetailsPage/AdditionalStopsList';
-import { DriversList } from '@/components/TripDetailsPage/DriversList';
+import { AppShell } from '@/components/layout/AppShell';
+import { Stamp } from '@/components/shared/Stamp';
+import { DocNumber } from '@/components/shared/DocNumber';
 import { DeleteConfirmDialog } from '@/components/TripDetailsPage/DeleteConfirmDialog';
 import { EmailApprovalDialog } from '@/components/TripDetailsPage/EmailApprovalDialog';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { motion } from 'framer-motion';
+import { useAuth } from '@/hooks/useAuth';
+import {
+  useTrip,
+  useDeleteTrip,
+  useUpdateTripStatus,
+  useSendApproval,
+} from '@/hooks/queries/useTrips';
+import { useRouter } from 'next/navigation';
 import {
   AlertTriangle,
   ArrowLeft,
-  FileText,
+  CheckCircle,
+  Edit,
   Printer,
   Send,
-  RefreshCw,
+  Trash2,
+  XCircle,
 } from 'lucide-react';
-import Link from 'next/link';
 
-/* ----------------------------- Loading UI ------------------------------ */
-const TripDetailsLoading = () => (
-  <div className="space-y-6 p-4">
-    <Skeleton className="h-20 rounded-md" />
-    <Skeleton className="h-12 rounded-md" />
-    <div className="space-y-4">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <Skeleton key={i} className="h-12 rounded-md" />
-      ))}
-    </div>
-  </div>
-);
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString('th-TH', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
 
-/* ---------------------------- Error UI --------------------------------- */
-const TripDetailsError = ({ error }: { error: string }) => (
-  <Alert variant="destructive" className="mt-6 mx-4">
-    <AlertTriangle className="h-4 w-4" />
-    <AlertTitle>เกิดข้อผิดพลาด</AlertTitle>
-    <AlertDescription>{error}</AlertDescription>
-  </Alert>
-);
-
-/* -------------------------------------------------------------------------- */
-/*  ส่วนเนื้อหาหลักของหน้า (ใช้ข้อมูลจากฮุก)                                */
-/* -------------------------------------------------------------------------- */
-const TripDetailsContent = () => {
-  const data = useTripDetails(); // โหลดข้อมูลทริป
-  const [selectedDriverIds] = useState<string[]>([]); // รายชื่อคนขับที่เลือก (ถ้ามี)
-  const [isPrinting, setIsPrinting] = useState(false);
-
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1, duration: 0.3 },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: { duration: 0.5 },
-    },
-  };
-
-  // ฟังก์ชันพิมพ์
-  const handlePrint = () => {
-    setIsPrinting(true);
-    setTimeout(() => {
-      window.print();
-      setIsPrinting(false);
-    }, 500);
-  };
-
-  /* กรณีโหลดข้อมูล */
-  if (data.loading) return <TripDetailsLoading />;
-
-  /* กรณีเกิดข้อผิดพลาด หรือไม่พบทริป */
-  if (data.error || !data.trip)
-    return <TripDetailsError error={data.error || 'ไม่พบข้อมูลทริป'} />;
-
-  /* UI เมื่อโหลดเสร็จ */
+function Field({
+  label,
+  children,
+  mono,
+  wide,
+}: {
+  label: string;
+  children: React.ReactNode;
+  mono?: boolean;
+  wide?: boolean;
+}) {
   return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="max-w-5xl mx-auto"
+    <div
+      className={`border-b border-dashed border-foreground/25 pb-2 ${wide ? 'sm:col-span-2' : ''}`}
     >
-      {/* ส่วนหัวของหน้า */}
-      <Header
-        trip={data.trip}
-        canModify={data.canModify}
-        canApprove={data.canApprove}
-        onEdit={() => (window.location.href = `/trips/${data.trip?.TID}/edit`)}
-        onDelete={() => data.setShowDeleteConfirm(true)}
-        onApprove={data.handleApprove}
-        onReject={data.handleReject}
-        onSend={() => data.setShowEmailDialog(true)}
-      />
-
-      <div className="p-4 space-y-6">
-        {/* ปุ่มย้อนกลับและปุ่มพิมพ์ */}
-        {data.trip.DEPARTMENT === 'MIS' && (
-          <motion.div
-            variants={itemVariants}
-            className="flex justify-between items-center not-print"
-          >
-            <Link href="/dashboard">
-              <Button variant="outline" className="flex items-center gap-2">
-                <ArrowLeft className="w-4 h-4" />
-                กลับสู่แดชบอร์ด
-              </Button>
-            </Link>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="not-print flex items-center gap-2"
-                onClick={handlePrint}
-                disabled={isPrinting}
-              >
-                {isPrinting ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Printer className="w-4 h-4" />
-                )}
-                พิมพ์รายงาน
-              </Button>
-              {data.trip.APPROVE_STATUS === 'Pending' && (
-                <Button
-                  variant="outline"
-                  className="flex items-center gap-2"
-                  onClick={() => data.setShowEmailDialog(true)}
-                >
-                  <Send className="w-4 h-4" />
-                  ส่งคำขออนุมัติ
-                </Button>
-              )}
-            </div>
-          </motion.div>
-        )}
-
-        {/* แบนเนอร์สถานะการอนุมัติ */}
-        <motion.div variants={itemVariants}>
-          <StatusBanner
-            status={data.trip.APPROVE_STATUS ?? undefined}
-            approvedBy={data.trip.APPROVED_BY ?? undefined}
-            approvedAt={
-              data.trip.APPROVED_AT
-                ? new Date(data.trip.APPROVED_AT).toLocaleDateString('th-TH')
-                : undefined
-            }
-          />
-        </motion.div>
-
-        {/* ข้อความสำเร็จของแอ็กชันต่าง ๆ */}
-        {data.actionSuccess && (
-          <motion.div variants={itemVariants}>
-            <Alert className="border-success/20 bg-success/10">
-              <AlertTitle className="font-medium text-success">
-                ดำเนินการสำเร็จ
-              </AlertTitle>
-              <AlertDescription className="text-success">
-                {data.actionSuccess}
-              </AlertDescription>
-            </Alert>
-          </motion.div>
-        )}
-
-        {/* ส่วนพิมพ์ - ส่วนหัวเอกสาร */}
-        <div className="hidden print:block text-center mb-6">
-          <h1 className="text-xl font-bold mb-2">รายงานรายละเอียดการใช้รถ</h1>
-          <p className="text-sm text-gray-500">หมายเลขทริป: #{data.trip.TID}</p>
-          <p className="text-sm text-gray-500">
-            วันที่พิมพ์: {new Date().toLocaleDateString('th-TH')}
-          </p>
-          <hr className="my-4" />
-        </div>
-
-        {/* ข้อมูลทริปหลัก */}
-        <motion.div variants={itemVariants}>
-          <Card>
-            <CardHeader className="border-b border-border">
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-primary" />
-                ข้อมูลทริป
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <TripInfo trip={data.trip} />
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* รายการจุดแวะเพิ่มเติม (ถ้ามี) */}
-        <motion.div variants={itemVariants}>
-          <AdditionalStopsList
-            items={data.trip.items?.map((item) => ({
-              START_POINT: item.START_POINT ?? '',
-              END_POINT: item.END_POINT ?? '',
-            }))}
-          />
-        </motion.div>
-
-        {/* รายชื่อคนขับ */}
-        <motion.div variants={itemVariants}>
-          <DriversList
-            drivers={
-              data.trip.drivers?.map((d) => ({
-                DRIVER_ID: String(d.DriverID),
-                DRIVER_NAME: d.DRIVER_NAME,
-              })) ?? []
-            }
-            selectedDriverIds={selectedDriverIds}
-            disabled={false}
-          />
-        </motion.div>
-
-        {/* ส่วนล่างสำหรับการพิมพ์ */}
-        <div className="hidden print:block mt-8 pt-8 border-t border-gray-300">
-          <div className="grid grid-cols-2 gap-8">
-            <div>
-              <p className="font-bold mb-4">ลงชื่อผู้ขอใช้รถ:</p>
-              <div className="border-b border-gray-300 mt-8 pt-4"></div>
-              <p className="mt-2">
-                ({data.trip.RECORD_BY_NAME || data.trip.RECORD_BY || 'ไม่ระบุ'})
-              </p>
-              <p className="text-sm text-gray-500">
-                วันที่: ........./........./.........
-              </p>
-            </div>
-            <div>
-              <p className="font-bold mb-4">ลงชื่อผู้อนุมัติ:</p>
-              <div className="border-b border-gray-300 mt-8 pt-4"></div>
-              <p className="mt-2">
-                (
-                {data.trip.APPROVED_BY || '...................................'}
-                )
-              </p>
-              <p className="text-sm text-gray-500">
-                วันที่: ........./........./.........
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* กล่องยืนยันการลบ */}
-        <DeleteConfirmDialog
-          open={data.showDeleteConfirm}
-          onClose={() => data.setShowDeleteConfirm(false)}
-          onDelete={data.handleDelete}
-          loading={data.actionLoading}
-        />
-
-        {/* กล่องส่งอีเมลขออนุมัติ */}
-        <EmailApprovalDialog
-          open={data.showEmailDialog}
-          onClose={() => data.setShowEmailDialog(false)}
-          email={data.approverEmail}
-          setEmail={data.setApproverEmail}
-          onSend={data.handleSendEmail}
-          loading={data.sendingEmail}
-          sent={data.emailSent}
-          error={data.emailError}
-        />
-
-        {/* สไตล์สำหรับการพิมพ์ */}
-        <style jsx global>{`
-          @media print {
-            body {
-              font-size: 12pt;
-              color: #000;
-              background: #fff;
-            }
-            .no-print {
-              display: none !important;
-            }
-            .print-only {
-              display: block !important;
-            }
-            @page {
-              size: A4;
-              margin: 2cm;
-            }
-          }
-        `}</style>
-      </div>
-    </motion.div>
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className={`mt-0.5 ${mono ? 'font-mono text-sm' : 'font-medium'}`}>
+        {children}
+      </p>
+    </div>
   );
-};
+}
 
-/* -------------------------------------------------------------------------- */
-/*  คอมโพเนนต์หลัก Export (ครอบด้วย AuthGuard และ Suspense)                  */
-/* -------------------------------------------------------------------------- */
-export default function TripDetailsPage() {
+export default function TripDetailsPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = use(params);
+  const tripId = Number(id);
+  const router = useRouter();
+  const { user } = useAuth();
+
+  const { data: trip, isLoading, error } = useTrip(tripId);
+  const deleteTrip = useDeleteTrip();
+  const updateStatus = useUpdateTripStatus();
+  const sendApproval = useSendApproval();
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [approverEmail, setApproverEmail] = useState('');
+  const [emailSent, setEmailSent] = useState(false);
+
+  const decide = (status: 'APPROVED' | 'REJECTED') =>
+    updateStatus.mutate(
+      { id: tripId, status },
+      {
+        onSuccess: () =>
+          toast.success(
+            status === 'APPROVED' ? 'อนุมัติทริปแล้ว' : 'ปฏิเสธทริปแล้ว'
+          ),
+        onError: (err) =>
+          toast.error(
+            err instanceof Error ? err.message : 'ดำเนินการไม่สำเร็จ'
+          ),
+      }
+    );
+
   return (
     <AuthGuard>
-      <Suspense fallback={<TripDetailsLoading />}>
-        <TripDetailsContent />
-      </Suspense>
+      <AppShell title="ใบขออนุญาตใช้รถ">
+        {isLoading && (
+          <div className="max-w-3xl mx-auto space-y-4">
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-64 w-full" />
+          </div>
+        )}
+
+        {error && (
+          <Alert variant="destructive" className="max-w-3xl mx-auto">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>เกิดข้อผิดพลาด</AlertTitle>
+            <AlertDescription>ไม่พบข้อมูลทริปนี้</AlertDescription>
+          </Alert>
+        )}
+
+        {trip && (
+          <div className="max-w-3xl mx-auto space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push('/trips')}
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                กลับ
+              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.print()}
+                >
+                  <Printer className="mr-2 h-4 w-4" />
+                  พิมพ์
+                </Button>
+                {trip.recordBy.id === Number(user?.id) &&
+                  trip.status === 'PENDING' && (
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/trips/${trip.id}/edit`}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        แก้ไข
+                      </Link>
+                    </Button>
+                  )}
+                {trip.status === 'PENDING' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowEmailDialog(true)}
+                  >
+                    <Send className="mr-2 h-4 w-4" />
+                    ส่งคำขออนุมัติ
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                  onClick={() => setShowDeleteConfirm(true)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  ลบ
+                </Button>
+              </div>
+            </div>
+
+            <article className="relative rounded-[3px] border border-foreground/30 bg-card px-4 py-5 sm:px-6 shadow-[3px_3px_0_0_hsl(var(--foreground)/0.08)]">
+              <div className="flex items-baseline justify-between border-b border-dashed border-foreground/40 pb-2">
+                <DocNumber id={trip.id} />
+                <span className="font-mono text-xs text-muted-foreground">
+                  ยื่นเมื่อ {formatDate(trip.createdAt)}
+                </span>
+              </div>
+
+              <h2 className="mt-4 text-xl font-medium sm:text-2xl">
+                {trip.startPoint} → {trip.endPoint}
+              </h2>
+
+              <div className="mt-5 grid grid-cols-1 gap-x-8 gap-y-4 text-sm sm:grid-cols-2">
+                <Field label="วันที่เดินทาง">{formatDate(trip.date)}</Field>
+                <Field label="ทะเบียนรถ" mono>
+                  {trip.car.plateNumber}
+                </Field>
+                <Field label="ยี่ห้อ / รุ่น">
+                  {trip.car.brand} {trip.car.model}
+                </Field>
+                <Field label="แผนก">{trip.department}</Field>
+                {(trip.purposeText || trip.purpose) && (
+                  <Field label="วัตถุประสงค์" wide>
+                    {trip.purposeText || trip.purpose}
+                  </Field>
+                )}
+                {trip.remark && (
+                  <Field label="หมายเหตุ" wide>
+                    {trip.remark}
+                  </Field>
+                )}
+              </div>
+
+              {trip.items.length > 0 && (
+                <div className="mt-6">
+                  <p className="text-xs text-muted-foreground">
+                    จุดแวะเพิ่มเติม
+                  </p>
+                  <ol className="mt-1 space-y-1 text-sm">
+                    {trip.items.map((item, i) => (
+                      <li
+                        key={item.id}
+                        className="border-b border-dashed border-foreground/20 pb-1"
+                      >
+                        <span className="mr-2 font-mono text-xs text-muted-foreground">
+                          {i + 1}.
+                        </span>
+                        {item.startPoint} → {item.endPoint}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+
+              {trip.drivers.length > 0 && (
+                <div className="mt-6">
+                  <p className="text-xs text-muted-foreground">คนขับ</p>
+                  <p className="mt-1 text-sm font-medium">
+                    {trip.drivers.map((d) => d.name).join(', ')}
+                  </p>
+                </div>
+              )}
+
+              {trip.approvers.length > 0 && (
+                <div className="mt-6">
+                  <p className="text-xs text-muted-foreground">
+                    ผู้อนุมัติ (คนใดคนหนึ่งตัดสินก็เพียงพอ)
+                  </p>
+                  <ul className="mt-1 space-y-1 text-sm">
+                    {trip.approvers.map((a) => (
+                      <li
+                        key={a.id}
+                        className="flex flex-wrap items-baseline justify-between gap-x-3 border-b border-dashed border-foreground/20 pb-1"
+                      >
+                        <span>
+                          {a.name ? `${a.name} ` : ''}
+                          <span className="font-mono text-xs text-muted-foreground">
+                            {a.email}
+                          </span>
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {a.decision === 'APPROVED'
+                            ? 'อนุมัติแล้ว'
+                            : a.decision === 'REJECTED'
+                              ? 'ปฏิเสธ'
+                              : trip.status === 'PENDING'
+                                ? 'รอตัดสิน'
+                                : '—'}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div className="relative mt-10 grid grid-cols-1 gap-8 pb-12 text-sm sm:grid-cols-2 sm:pb-0">
+                <div>
+                  <div className="h-8 border-b border-foreground/70" />
+                  <p className="mt-1 font-medium">{trip.recordBy.name}</p>
+                  <p className="text-xs text-muted-foreground">ผู้ขอใช้รถ</p>
+                </div>
+                <div>
+                  <div className="h-8 border-b border-foreground/70" />
+                  <p className="mt-1 font-medium">
+                    {trip.approvedBy?.name ?? ' '}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    ผู้อนุมัติ
+                    {trip.approvedAt && (
+                      <span className="ml-2 font-mono">
+                        {new Date(trip.approvedAt).toLocaleDateString('th-TH')}
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <Stamp
+                  status={trip.status}
+                  size="lg"
+                  className="absolute -bottom-2 right-4 bg-card/60"
+                />
+              </div>
+            </article>
+
+            {(user?.role === 'ADMIN' || user?.role === 'APPROVER') &&
+              trip.status === 'PENDING' && (
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                    disabled={updateStatus.isPending}
+                    onClick={() => decide('REJECTED')}
+                  >
+                    <XCircle className="mr-2 h-4 w-4" />
+                    ปฏิเสธ
+                  </Button>
+                  <Button
+                    disabled={updateStatus.isPending}
+                    onClick={() => decide('APPROVED')}
+                  >
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    ประทับอนุมัติ
+                  </Button>
+                </div>
+              )}
+
+            <DeleteConfirmDialog
+              open={showDeleteConfirm}
+              onClose={() => setShowDeleteConfirm(false)}
+              loading={deleteTrip.isPending}
+              onDelete={() =>
+                deleteTrip.mutate(trip.id, {
+                  onSuccess: () => {
+                    toast.success('ลบทริปแล้ว');
+                    router.push('/trips');
+                  },
+                  onError: (err) =>
+                    toast.error(
+                      err instanceof Error ? err.message : 'ลบไม่สำเร็จ'
+                    ),
+                })
+              }
+            />
+
+            <EmailApprovalDialog
+              open={showEmailDialog}
+              onClose={() => {
+                setShowEmailDialog(false);
+                setEmailSent(false);
+              }}
+              email={approverEmail}
+              setEmail={setApproverEmail}
+              loading={sendApproval.isPending}
+              sent={emailSent}
+              error={
+                sendApproval.error instanceof Error
+                  ? sendApproval.error.message
+                  : null
+              }
+              onSend={() =>
+                sendApproval.mutate(
+                  { id: trip.id, input: { approverEmails: [approverEmail] } },
+                  { onSuccess: () => setEmailSent(true) }
+                )
+              }
+            />
+          </div>
+        )}
+      </AppShell>
     </AuthGuard>
   );
 }

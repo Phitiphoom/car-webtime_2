@@ -1,18 +1,32 @@
 // src/utils/error-handler.ts
 import { NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
+
+const KNOWN_AUTH_FAILURE_MESSAGES = new Set([
+  'Invalid Credentials',
+  'Authentication failed',
+  'Invalid username or password',
+]);
 
 export function handleError(error: unknown): NextResponse {
-  console.error('Unhandled error:', error);
+  logger.error({ err: error }, 'Request failed');
 
-  // ตรวจสอบประเภทของ error และดึงข้อความ
   const message = error instanceof Error ? error.message : 'Unknown error';
 
-  // ตรวจสอบประเภทของ error เพื่อกำหนด HTTP status
-  const status =
-    error instanceof Error && error.message === 'Invalid Credentials'
-      ? 401
-      : 500;
+  // Prefer an explicit .status set by the throw site (see e.g.
+  // UserService.findOrCreateFromCredentials) over guessing from the message.
+  const statusCandidate =
+    error instanceof Error
+      ? (error as unknown as { status?: unknown }).status
+      : undefined;
+  const explicitStatus =
+    typeof statusCandidate === 'number' ? statusCandidate : undefined;
 
-  // ส่งคืน JSON response เสมอ ไม่ใช่ HTML
+  const status =
+    explicitStatus ??
+    (error instanceof Error && KNOWN_AUTH_FAILURE_MESSAGES.has(error.message)
+      ? 401
+      : 500);
+
   return NextResponse.json({ error: message }, { status });
 }

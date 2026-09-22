@@ -1,70 +1,68 @@
 // src/lib/api.ts
-export async function fetchWithAuth(url: string, options: RequestInit = {}) {
-  // เรียกใช้ token จาก localStorage
-  const token = localStorage.getItem('carWebtime_token');
+//
+// Single fetch wrapper for all client-side API calls. Auth now travels via
+// an httpOnly cookie set by the login route (src/app/api/auth/login/route.ts)
+// instead of a token read out of localStorage — the browser attaches the
+// cookie automatically as long as `credentials: 'include'` is set, so there
+// is no Authorization header to build here at all. This replaces both the
+// old fetchWithAuth() and the several hooks that hand-rolled raw fetch()
+// with duplicated 401-handling.
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
 
-  // สร้าง headers ใหม่จาก options ที่ส่งมา
-  const headers = new Headers(options.headers || {});
-
-  // ถ้าไม่มี Content-Type ใน headers ให้เพิ่มเข้าไป
-  if (!headers.has('Content-Type')) {
+async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
+  const headers = new Headers(options.headers);
+  if (!headers.has('Content-Type') && options.body) {
     headers.set('Content-Type', 'application/json');
   }
 
-  // ถ้ามี token ให้เพิ่ม Authorization header
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`);
-  } else {
-    console.warn('No auth token found when calling:', url);
-  }
+  const response = await fetch(url, {
+    ...options,
+    headers,
+    credentials: 'include',
+  });
 
-  try {
-    // ส่ง request พร้อม headers ที่ปรับแล้ว
-    const response = await fetch(url, {
-      ...options,
-      headers,
-    });
-
-    // ตรวจสอบสถานะ response
-    if (!response.ok) {
-      // ถ้าเป็น 401 ให้นำไปที่หน้า login
-      if (response.status === 401) {
-        console.warn('Authentication required, redirecting to login');
-        localStorage.removeItem('carWebtime_user');
-        localStorage.removeItem('carWebtime_token');
-
-        // ถ้าไม่ใช่ server-side ให้ redirect ไปที่หน้า login
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login';
-        }
-
-        throw new Error('Authentication required');
-      }
-
-      // ถ้าเป็น 403 ให้แจ้งว่าไม่มีสิทธิ์
-      if (response.status === 403) {
-        throw new Error('You do not have permission to perform this action');
-      }
-
-      // อ่านข้อความ error จาก response
-      let errorMessage = 'API request failed';
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.error || errorMessage;
-      } catch {
-        errorMessage = response.statusText || errorMessage;
-      }
-
-      throw new Error(errorMessage);
+  if (response.status === 401) {
+    if (
+      typeof window !== 'undefined' &&
+      !window.location.pathname.startsWith('/login')
+    ) {
+      window.location.href = '/login';
     }
-
-    // ส่งคืนข้อมูลเป็น JSON object
-    return response.json();
-  } catch (error) {
-    // แสดง error ใน console
-    console.error(`API request failed for ${url}:`, error);
-
-    // ส่งต่อ error ให้ส่วนที่เรียกใช้จัดการต่อ
-    throw error;
+    throw new ApiError('Authentication required', 401);
   }
+
+  if (!response.ok) {
+    let message = response.statusText || 'Request failed';
+    try {
+      const data = await response.json();
+      message = typeof data.error === 'string' ? data.error : message;
+    } catch {
+      // response body wasn't JSON — fall back to statusText
+    }
+    throw new ApiError(message, response.status);
+  }
+
+  if (response.status === 204) return undefined as T;
+  return response.json();
 }
+
+export const api = {
+  get: <T>(url: string) => request<T>(url),
+  post: <T>(url: string, body?: unknown) =>
+    request<T>(url, {
+      method: 'POST',
+      body: body ? JSON.stringify(body) : undefined,
+    }),
+  put: <T>(url: string, body?: unknown) =>
+    request<T>(url, {
+      method: 'PUT',
+      body: body ? JSON.stringify(body) : undefined,
+    }),
+  delete: <T>(url: string) => request<T>(url, { method: 'DELETE' }),
+};

@@ -1,0 +1,176 @@
+
+=== cyberhrm.dbo.PNT_Person ===
+  PersonID: numeric NOT NULL
+  PersonCode: varchar(50) NULL
+  PersonCardID: varchar(20) NULL
+  InitialID: numeric NULL
+  FnameT: varchar(50) NULL
+  LnameT: varchar(50) NULL
+  FnameE: varchar(50) NULL
+  LnameE: varchar(50) NULL
+  Cmb1ID: numeric NOT NULL
+  Cmb2ID: numeric NOT NULL
+  Cmb3ID: numeric NOT NULL
+  Cmb4ID: numeric NOT NULL
+  Cmb5ID: numeric NOT NULL
+  cmb6ID: numeric NOT NULL
+  PositionID: numeric NOT NULL
+  EmpTypeID: numeric NOT NULL
+  ContractID: numeric NULL
+  ContractBegin: datetime NULL
+  ContractExpire: datetime NULL
+  Age: tinyint NULL
+  BirthDate: datetime NULL
+  StartDate: datetime NULL
+  PassDate: datetime NULL
+  numProof: int NULL
+  EndDate: datetime NULL
+  WorkOld: varchar(50) NULL
+  TaxID: varchar(50) NULL
+  SSFID: varchar(50) NULL
+  HospitalID: numeric NULL
+  ContactNo: varchar(50) NULL
+  IdentityID: varchar(50) NULL
+  IdentityExpire: datetime NULL
+  PFID: varchar(20) NULL
+  SexID: numeric NOT NULL
+  LevelID: numeric NULL
+  CompanyID: numeric NOT NULL
+  ChkNation: bit NOT NULL
+  PassportID: varchar(20) NULL
+  PassportPlace: varchar(200) NULL
+  PassportStart: datetime NULL
+  PassportExpire: datetime NULL
+  PassportMemo: varchar(200) NULL
+  VisaID: varchar(20) NULL
+  VisaPlace: varchar(200) NULL
+  VisaStart: datetime NULL
+  VisaExpire: datetime NULL
+  VisaMemo: varchar(200) NULL
+  AwworkID: varchar(20) NULL
+  AwworkPlace: varchar(200) NULL
+  AwworkStart: datetime NULL
+  AwworkExpire: datetime NULL
+  AwworkMemo: varchar(200) NULL
+  CurrentAddress: varchar(1000) NULL
+  CurrentBuilding: varchar(500) NULL
+  CurrentSoi: varchar(50) NULL
+  CurrentRoad: varchar(50) NULL
+  CurrentDistric: numeric NULL
+  CurrentAmphur: numeric NULL
+  CurrentProvince: numeric NULL
+  CurrentPostID: varchar(7) NULL
+  CurrentTel: varchar(50) NULL
+  CurrentNation: numeric NULL
+  CardAddress: varchar(1000) NULL
+  CardBuilding: varchar(500) NULL
+  CardSoi: varchar(50) NULL
+  CardRoad: varchar(50) NULL
+  CardDistric: numeric NULL
+  CardAmphur: numeric NULL
+  CardProvince: numeric NULL
+  CardPostID: varchar(7) NULL
+  CardTel: varchar(50) NULL
+  CardNation: numeric NULL
+  MateName: varchar(100) NULL
+  MateAddress: varchar(200) NULL
+  MateAge: tinyint NULL
+  numChild: tinyint NULL
+  numSon: tinyint NULL
+  numDaughter: tinyint NULL
+  MateAlive: bit NOT NULL
+  MateOccupation: numeric NULL
+  MatePosition: numeric NULL
+  MateTel: varchar(50) NULL
+  MateSSF: varchar(20) NULL
+  MateTax: varchar(20) NULL
+  MateIdentity: varchar(20) NULL
+  FatherName: varchar(100) NULL
+  FatherAddress: varchar(200) NULL
+  FatherOccupation: numeric NULL
+  FatherTel: varchar(50) NULL
+  FatherAge: tinyint NULL
+  FatherAlive: bit NOT NULL
+  MotherName: varchar(100) NULL
+  MotherAddress: varchar(200) NULL
+  MotherOccupation: numeric NULL
+  MotherTel: varchar(50) NULL
+  MotherAge: tinyint NULL
+  MotherAlive: bit NOT NULL
+  WedStatus: bit NOT NULL
+  PosSon: tinyint NULL
+  numMen: tinyint NULL
+  numWomen: tinyint NULL
+  BureID: numeric NULL
+  BureExpire: datetime NULL
+  ChkDeletePerson: bit NOT NULL
+  WorkStatusID: numeric NULL
+  ResignStatus: bit NOT NULL
+  Salary: float NULL
+  Salary2: real NULL
+  JGID: numeric NULL
+  PersonPic: image(2147483647) NULL
+  TypeProcessSalary: varchar(1) NULL
+  MateFname: varchar(100) NULL
+  MateLname: varchar(100) NULL
+  MateInitial: numeric NULL
+  FatherIden: varchar(50) NULL
+  MotherIden: varchar(55) NULL
+  hour_train: numeric NULL
+  PicPath: varchar(250) NULL
+  MateBirth: datetime NULL
+  MotherBirth: datetime NULL
+  FatherBirth: datetime NULL
+  DateInPos: datetime NULL
+  DateIn1: datetime NULL
+  DateIn2: datetime NULL
+  DateIn3: datetime NULL
+  DateIn4: datetime NULL
+  DateIn5: datetime NULL
+  DateIn6: datetime NULL
+  Salary_Encrypt: varchar(50) NULL
+  MaxSalary: float NULL
+  YearMarital: varchar(50) NULL
+  AmphurMarital: varchar(50) NULL
+  ProvMarital: varchar(50) NULL
+  MateAmphur: varchar(50) NULL
+  MateProv: varchar(50) NULL
+  commanderID: numeric NULL
+  StatusEmpID: numeric NULL
+  PositionMother: varchar(200) NULL
+  DateInLevel: datetime NULL
+  DateInContract: datetime NULL
+  DateInEmpType: datetime NULL
+  DateInTypeProcess: datetime NULL
+  Zodiac: int NULL
+  Ddays: int NULL
+  TempDate: datetime NULL
+  PositionFather: varchar(200) NULL
+  LastChang_Date: datetime NULL
+  UserName: nvarchar(100) NULL
+  StartAgePosition: datetime NULL
+  AgePositionBF: tinyint NULL
+  OTLimit_WellGraded: int NULL
+  StartAgeCMB3: datetime NULL
+  commanderID2: numeric NULL
+  ZodiacYear: int NULL
+  AgePosition: datetime NULL
+
+=== cyberhrm.dbo.ADM_UserPws ===
+  ID_UserPws: numeric NOT NULL
+  PersonID: numeric NULL
+  ID_User: numeric NULL
+  Pws: varchar(20) NULL
+  User2PWD: varchar(50) NULL
+  UserChang: varchar(20) NULL
+  LoginWebErrorTimes: tinyint NULL
+  Finger1: ntext(1073741823) NULL
+  Finger2: ntext(1073741823) NULL
+  CanProcessTime: bit NULL
+  ArseephaPwd: varchar(100) NULL
+  ArseephaReg: bit NULL
+  ArseephaPrint: bit NULL
+  ArseephaPDF: bit NULL
+  PwsChangeDate: datetime NULL
+  Ck_Docprofile: bit NULL
+  EmailOpenID_ETDA: varchar(250) NULL

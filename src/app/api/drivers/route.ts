@@ -1,61 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import { verifyJwtMiddleware } from '@/lib/auth-middleware';
+import { z } from 'zod';
+import { requireAuth } from '@/server/auth/guards';
+import { DriverService } from '@/server/reference-data/driver.service';
+import { CreateDriverSchema } from '@/server/reference-data/driver.schema';
+import { handleError } from '@/utils/error-handler';
 
 export async function GET(request: NextRequest) {
+  const auth = await requireAuth(request);
+  if (!auth.ok) return auth.response;
+
   try {
-    const auth = await verifyJwtMiddleware(request);
-    if (!auth.isAuthenticated) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const drivers = await prisma.dRIVER_DETAIL.findMany({
-      where: {
-        IS_ACTIVE: true,
-        DELETED_AT: null,
-      },
-      orderBy: {
-        DRIVER_NAME: 'asc',
-      },
-    });
-
+    // Only admins may ask for deactivated rows (admin screens); everyone
+    // else — including the trip form — only ever sees active ones.
+    const includeInactive =
+      auth.user.role === 'ADMIN' &&
+      request.nextUrl.searchParams.get('includeInactive') === '1';
+    const drivers = await DriverService.list(includeInactive);
     return NextResponse.json({ data: drivers });
-  } catch (error) {
-    console.error('Error fetching drivers:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch drivers' },
-      { status: 500 }
-    );
+  } catch (err) {
+    return handleError(err);
   }
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth(request);
+  if (!auth.ok) return auth.response;
+
   try {
-    const auth = await verifyJwtMiddleware(request);
-    if (!auth.isAuthenticated) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const body = await request.json();
+    const input = CreateDriverSchema.parse(body);
+    const driver = await DriverService.create(input);
+    return NextResponse.json({ data: driver }, { status: 201 });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: err.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
-
-    const data = await request.json();
-    const driver = await prisma.dRIVER_DETAIL.create({
-      data: {
-        DRIVER_NAME: data.driverName,
-        DRIVER_CODE: data.driverCode,
-        DEPARTMENT: data.department,
-        LICENSE_NUMBER: data.licenseNumber,
-        PHONE: data.phone,
-        EMAIL: data.email,
-        CREATED_AT: new Date(),
-        UPDATED_AT: new Date(),
-      },
-    });
-
-    return NextResponse.json({ data: driver });
-  } catch (error) {
-    console.error('Error creating driver:', error);
-    return NextResponse.json(
-      { error: 'Failed to create driver' },
-      { status: 500 }
-    );
+    return handleError(err);
   }
 }

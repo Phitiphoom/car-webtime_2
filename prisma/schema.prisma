@@ -1,3 +1,20 @@
+// Target schema for the car-webtime rebuild.
+//
+// This replaces the old schema's free-text status/department/brand columns
+// and TID-style naming with real lookup tables and consistent camelCase
+// fields. Getting from the current production schema to this one is a data
+// migration (Phase 3 of the rebuild plan), not an in-place `prisma migrate
+// dev` against live data — see prisma/migrations/README.md for the baseline
+// + cutover approach.
+//
+// NOTE: Prisma's `enum` is not supported on the sqlserver connector (SQL
+// Server has no native enum type) — `role`, `status`, and `action` below are
+// plain VarChar columns instead. The canonical value sets and their
+// TypeScript types live in src/server/shared/enums.ts (Zod-validated), which
+// is the single source of truth application code should import from instead
+// of hardcoding string literals — this is exactly the discipline the old
+// TripStatus casing bugs ('Pending'/'approve'/'approved', three different
+// spellings for the same concept) were missing.
 generator client {
   provider = "prisma-client-js"
 }
@@ -6,6 +23,212 @@ datasource db {
   provider = "sqlserver"
   url      = env("DATABASE_URL")
 }
+
+// Real lookup table, replacing the old distinct()-scan over TV_USERNAME.DEPARTMENT
+// + TRAVEL_DETAIL.DEPARTMENT and the hardcoded APPROVER_DEPARTMENTS/DEPARTMENT_ALIAS
+// sets in src/lib/auth-middleware.ts. Seeded from that allowlist during migration.
+model Department {
+  id             Int      @id @default(autoincrement())
+  name           String   @unique @db.NVarChar(255)
+  isApproverDept Boolean  @default(false)
+  isAdminDept    Boolean  @default(false)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  users   User[]
+  drivers DriverDetail[]
+  trips   Trip[]
+}
+
+// Real lookup table, replacing the old distinct()-scan over TRAVEL_DETAIL.CARBARND
+// (where "adding a brand" meant inserting a soft-deleted dummy trip row).
+// Trips no longer reference this directly — see the note on Trip.carId
+// below — CarBrand is now purely "what brand is this specific car," one
+// level removed from trip-booking.
+model CarBrand {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique @db.NVarChar(255)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cars CarDetail[]
+}
+
+// Renamed from TV_USERNAME. `role` is now a stored column (values: ADMIN,
+// APPROVER, USER — see src/server/shared/enums.ts) set at provisioning time
+// (login-time LDAP sync or admin action) instead of being re-derived from
+// `department` on every request.
+model User {
+  id           Int         @id @default(autoincrement())
+  username     String      @unique @db.NVarChar(255)
+  password     String      @db.NVarChar(255)
+  name         String      @db.NVarChar(255)
+  email        String?     @db.VarChar(255)
+  role         String      @default("USER") @db.VarChar(20)
+  departmentId Int?
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  ipAddress    String?     @db.NVarChar(50)
+  isActive     Boolean     @default(true)
+  lastAction   DateTime?
+  editDate     DateTime?
+  logDate      DateTime?
+  createdAt    DateTime    @default(now())
+  deletedAt    DateTime?
+
+  recordedTrips Trip[] @relation("TripRecordedBy")
+  approvedTrips Trip[] @relation("TripApprovedBy")
+}
+
+// Renamed from TRAVEL_DETAIL. `status` (values: PENDING, APPROVED, REJECTED,
+// CANCELLED — see src/server/shared/enums.ts) replaces the old free-text
+// column that had three different casings in use across the codebase.
+// deletedAt replaces the old separate is_deleted boolean + deleted_at pair.
+model Trip {
+  id           Int        @id @default(autoincrement())
+  startPoint   String     @db.NVarChar(255)
+  endPoint     String     @db.NVarChar(255)
+  // A trip books a specific vehicle now, not just a brand name — decision
+  // after the rebuild shipped: the old app (and this rebuild's first pass)
+  // only ever recorded which brand was used, with no link to an actual car
+  // in the fleet. carId -> CarDetail carries brand/model/plate along with it
+  // via the relation, so CarBrand is no longer referenced from Trip at all.
+  carId        Int
+  car          CarDetail  @relation(fields: [carId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  remark       String?    @db.NVarChar(Max)
+  time         DateTime?  @db.Time
+  date         DateTime   @db.Date
+  locations    String?    @db.NVarChar(Max)
+  purpose      String?    @db.NVarChar(255)
+  purposeText  String?    @db.NVarChar(Max)
+  departmentId Int
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  status       String    @default("PENDING") @db.VarChar(20)
+  recordById   Int
+  recordBy     User      @relation("TripRecordedBy", fields: [recordById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  approvedById Int?
+  approvedBy   User?     @relation("TripApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  approvedAt   DateTime?
+  // Deprecated: superseded by TripApprover (multiple approvers per trip).
+  // Kept only so `db push` doesn't have to drop the column; nothing reads it.
+  approveEmail String?   @db.VarChar(255)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  items          TripItem[]
+  drivers        TripDriver[]
+  approvalTokens ApprovalToken[]
+  approvers      TripApprover[]
+}
+
+// One row per person asked to approve a trip. Any single approver's decision
+// settles the trip (first decision wins — enforced atomically in
+// TripService.setApprovalStatus); the other rows simply stay undecided.
+// decision: APPROVED | REJECTED | null (not decided yet).
+model TripApprover {
+  id        Int       @id @default(autoincrement())
+  tripId    Int
+  trip      Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  email     String    @db.VarChar(255)
+  name      String?   @db.NVarChar(255)
+  decision  String?   @db.VarChar(20)
+  decidedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@unique([tripId, email])
+}
+
+// Renamed from TRAVEL_DETAIL_ITEMS. tripId is now non-nullable — the old
+// nullable FK let item rows survive as orphans after a trip's soft delete.
+model TripItem {
+  id         Int    @id @default(autoincrement())
+  tripId     Int
+  trip       Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  startPoint String @db.VarChar(255)
+  endPoint   String @db.VarChar(255)
+}
+
+// Renamed from TRAVEL_DRIVERS. driverId is now a real FK to DriverDetail
+// instead of a copied DRIVER_NAME string.
+model TripDriver {
+  id       Int          @id @default(autoincrement())
+  tripId   Int
+  trip     Trip         @relation(fields: [tripId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  driverId Int
+  driver   DriverDetail @relation(fields: [driverId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+// Backs the signed, single-use, expiring email-approval token (replacing the
+// old unsigned base64 `tripId:action` token). The JWT's `jti` claim is
+// looked up here on redemption; a present `usedAt` rejects replay. `action`
+// values: APPROVE, REJECT — see src/server/shared/enums.ts.
+model ApprovalToken {
+  id        Int       @id @default(autoincrement())
+  jti       String    @unique @db.VarChar(255)
+  tripId    Int
+  trip      Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  action    String    @db.VarChar(20)
+  // Which approver this link was emailed to (lowercased); null for old tokens.
+  approverEmail String? @db.VarChar(255)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+// Renamed from CAR_DETAIL. brandId replaces the free-text BRAND column.
+model CarDetail {
+  id          Int       @id @default(autoincrement())
+  carCode     String?   @unique @db.VarChar(50)
+  brandId     Int
+  brand       CarBrand  @relation(fields: [brandId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  model       String    @db.VarChar(100)
+  plateNumber String    @db.VarChar(20)
+  color       String?   @db.VarChar(50)
+  year        Int?
+  status      String?   @default("Available") @db.VarChar(20)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime?
+  deletedAt   DateTime?
+
+  trips Trip[]
+}
+
+// Renamed from DRIVER_DETAIL.
+model DriverDetail {
+  id            Int         @id @default(autoincrement())
+  driverCode    String?     @db.VarChar(50)
+  name          String      @db.VarChar(255)
+  departmentId  Int?
+  department    Department? @relation(fields: [departmentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  licenseNumber String?     @db.VarChar(50)
+  phone         String?     @db.VarChar(20)
+  email         String?     @db.VarChar(255)
+  isActive      Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime?
+  deletedAt     DateTime?
+
+  tripAssignments TripDriver[]
+}
+
+// =============================================================================
+// LEGACY TABLES — kept for reference/read-only, not used by any app code.
+//
+// These are the OLD models this rewrite replaced (see the comments on the
+// new models above for the old->new mapping). They are declared here purely
+// so `prisma db push` / `prisma migrate` see them as "known" and never
+// propose dropping them — omitting them entirely made `db push` treat the
+// live tables as unrecognized and offer to DROP them (they have real data:
+// 398 trips, 60 users, etc. at last check). `@@ignore` means Prisma Client
+// generates no types/methods for these — the app can't accidentally read or
+// write them. Do not delete these blocks without first exporting/archiving
+// the underlying tables (see prisma/migrations/README.md).
+// =============================================================================
 
 model TRAVEL_DETAIL {
   TID            Int                   @id(map: "PK__TRAVEL_D__C456D729C75772B4") @default(autoincrement())
@@ -30,6 +253,8 @@ model TRAVEL_DETAIL {
   DEPARTMENT     String?               @db.NVarChar(255)
   items          TRAVEL_DETAIL_ITEMS[]
   drivers        TRAVEL_DRIVERS[]
+
+  @@ignore
 }
 
 model TRAVEL_DETAIL_ITEMS {
@@ -38,6 +263,8 @@ model TRAVEL_DETAIL_ITEMS {
   START_POINT  String?        @db.VarChar(255)
   END_POINT    String?        @db.VarChar(255)
   travelDetail TRAVEL_DETAIL? @relation(fields: [TID], references: [TID], onDelete: NoAction, onUpdate: NoAction, map: "FK__TRAVEL_DETA__TID__2A4B4B5E")
+
+  @@ignore
 }
 
 model TRAVEL_DRIVERS {
@@ -45,6 +272,8 @@ model TRAVEL_DRIVERS {
   TID          Int?
   DRIVER_NAME  String         @db.VarChar(255)
   travelDetail TRAVEL_DETAIL? @relation(fields: [TID], references: [TID], onDelete: NoAction, onUpdate: NoAction, map: "FK__TRAVEL_DRIV__TID__33D4B598")
+
+  @@ignore
 }
 
 model TV_USERNAME {
@@ -62,6 +291,8 @@ model TV_USERNAME {
   EMAIL      String?   @db.VarChar(255)
   IS_ACTIVE  Boolean?  @default(true, map: "DF_TV_USERNAME_IS_ACTIVE")
   DELETED_AT DateTime? @db.DateTime
+
+  @@ignore
 }
 
 model TRAVEL_DETAIL_BACKUP {
@@ -78,7 +309,7 @@ model TRAVEL_DETAIL_BACKUP {
   @@ignore
 }
 
-model CAR_DETAIL {
+model CAR_DETAIL_LEGACY {
   CAR_ID       Int       @id(map: "PK__CAR_DETA__7D16AF24E7C55CA7") @default(autoincrement())
   CAR_CODE     String?   @unique(map: "UQ__CAR_DETA__8860384CA399720E") @db.VarChar(50)
   BRAND        String    @db.VarChar(100)
@@ -91,9 +322,12 @@ model CAR_DETAIL {
   CREATED_AT   DateTime? @default(now(), map: "DF__CAR_DETAI__CREAT__5070F446") @db.DateTime
   UPDATED_AT   DateTime? @db.DateTime
   DELETED_AT   DateTime? @db.DateTime
+
+  @@map("CAR_DETAIL")
+  @@ignore
 }
 
-model DRIVER_DETAIL {
+model DRIVER_DETAIL_LEGACY {
   DRIVER_ID      Int       @id(map: "PK__DRIVER_D__030E1394C90F4EE4") @default(autoincrement())
   DRIVER_CODE    String?   @db.VarChar(50)
   DRIVER_NAME    String    @db.VarChar(255)
@@ -105,4 +339,7 @@ model DRIVER_DETAIL {
   CREATED_AT     DateTime? @default(now(), map: "DF__DRIVER_DE__CREAT__4AB81AF0") @db.DateTime
   UPDATED_AT     DateTime? @db.DateTime
   DELETED_AT     DateTime? @db.DateTime
+
+  @@map("DRIVER_DETAIL")
+  @@ignore
 }

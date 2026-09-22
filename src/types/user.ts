@@ -1,39 +1,15 @@
 // src/types/user.ts
+//
+// Only used by the src/lib/auth-middleware.ts backward-compat shim now.
+// New code should use UserDTO from src/server/users/user.schema.ts instead
+// — the old CreateUserDTO/UserFields here referenced fields (ROLE_ID, MENU,
+// IS_REVIEW, ...) that never matched the real schema and have been removed.
+import { Role } from '@/server/shared/enums';
+
 export type User = {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'approver' | 'user';
+  role: Role;
   department?: string;
-};
-export interface CreateUserDTO {
-  USERNAME: string;
-  NAME: string;
-  PASSWORD: string;
-  ROLE_ID: string;
-  EMAIL: string;
-  DEPARTMENT_ID: string;
-  COMPANY_ID: string;
-  MENU: string; // เปลี่ยนเป็น required property
-  POSITION_NAME: string;
-  IS_EDIT: boolean;
-  IS_REVIEW: boolean;
-  IS_APPROVE: boolean;
-  IS_ACTIVE: boolean;
-}
-
-export type UserFields = {
-  name: keyof CreateUserDTO;
-  label: string;
-  type: 'text' | 'textarea' | 'switch' | 'combobox' | 'email';
-  placeholder?: string;
-  description?: string;
-  required?: boolean;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  options?: any;
-  validation?: {
-    min?: number;
-    max?: number;
-    pattern?: string;
-  };
 };

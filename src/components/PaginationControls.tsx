@@ -136,7 +136,7 @@ export function PaginationControls({
     >
       {/* ---------- ข้อความสรุป ---------- */}
       {showPageInfo && (
-        <div className="text-xs sm:text-sm text-gray-500 text-center sm:text-left">
+        <div className="text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
           แสดง {Math.min((page - 1) * limit + 1, totalCount)} -{' '}
           {Math.min(page * limit, totalCount)} จาก {totalCount} รายการ
         </div>
@@ -147,12 +147,12 @@ export function PaginationControls({
         {/* เลือกจำนวนต่อหน้า */}
         {showLimitSelector && onLimitChange && (
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">แสดง:</span>
+            <span className="text-sm text-muted-foreground">แสดง:</span>
             <Select
               value={String(limit)}
               onValueChange={(v) => onLimitChange(+v)}
             >
-              <SelectTrigger className="w-16 h-8 text-sm">
+              <SelectTrigger className="w-20 h-8 text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

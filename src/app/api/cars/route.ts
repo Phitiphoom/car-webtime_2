@@ -1,62 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import { verifyJwtMiddleware } from '@/lib/auth-middleware';
+import { z } from 'zod';
+import { requireAuth } from '@/server/auth/guards';
+import { CarService } from '@/server/reference-data/car.service';
+import { CreateCarSchema } from '@/server/reference-data/car.schema';
+import { handleError } from '@/utils/error-handler';
 
 export async function GET(request: NextRequest) {
+  const auth = await requireAuth(request);
+  if (!auth.ok) return auth.response;
+
   try {
-    const auth = await verifyJwtMiddleware(request);
-    if (!auth.isAuthenticated) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const cars = await prisma.cAR_DETAIL.findMany({
-      where: {
-        IS_ACTIVE: true,
-        DELETED_AT: null,
-      },
-      orderBy: {
-        BRAND: 'asc',
-      },
-    });
-
+    // Only admins may ask for deactivated rows (admin screens); everyone
+    // else — including the trip form — only ever sees active ones.
+    const includeInactive =
+      auth.user.role === 'ADMIN' &&
+      request.nextUrl.searchParams.get('includeInactive') === '1';
+    const cars = await CarService.list(includeInactive);
     return NextResponse.json({ data: cars });
-  } catch (error) {
-    console.error('Error fetching cars:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch cars' },
-      { status: 500 }
-    );
+  } catch (err) {
+    return handleError(err);
   }
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth(request);
+  if (!auth.ok) return auth.response;
+
   try {
-    const auth = await verifyJwtMiddleware(request);
-    if (!auth.isAuthenticated) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const body = await request.json();
+    const input = CreateCarSchema.parse(body);
+    const car = await CarService.create(input);
+    return NextResponse.json({ data: car }, { status: 201 });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: err.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
-
-    const data = await request.json();
-    const car = await prisma.cAR_DETAIL.create({
-      data: {
-        CAR_CODE: data.carCode,
-        BRAND: data.brand,
-        MODEL: data.model,
-        PLATE_NUMBER: data.plateNumber,
-        COLOR: data.color,
-        YEAR: data.year,
-        STATUS: data.status || 'Available',
-        CREATED_AT: new Date(),
-        UPDATED_AT: new Date(),
-      },
-    });
-
-    return NextResponse.json({ data: car });
-  } catch (error) {
-    console.error('Error creating car:', error);
-    return NextResponse.json(
-      { error: 'Failed to create car' },
-      { status: 500 }
-    );
+    return handleError(err);
   }
 }

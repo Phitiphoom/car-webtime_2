@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
+import { env } from '@/env';
 
 // กำหนด interface ให้ payload
 interface JwtPayload extends Record<string, unknown> {
@@ -19,9 +20,7 @@ interface TokenVerificationResult {
 // ฟังก์ชันตรวจสอบ token
 async function verifyToken(token: string): Promise<TokenVerificationResult> {
   try {
-    const secretKey = new TextEncoder().encode(
-      process.env.JWT_SECRET || 'your-secret-key'
-    );
+    const secretKey = new TextEncoder().encode(env.JWT_SECRET);
     const { payload } = await jwtVerify(token, secretKey);
 
     // ตรวจสอบว่า token หมดอายุหรือไม่ โดยเช็คด้วยตัวเอง
@@ -62,9 +61,13 @@ export async function middleware(request: NextRequest) {
   const token = request.cookies.get('carWebtime_token')?.value;
 
   // ตรวจสอบว่าผู้ใช้กำลังเข้าถึง route ที่ต้องการ authentication หรือไม่
-  const isAuthRoute = ['/dashboard', '/log-usage', '/trips', '/admin'].some(
-    (route) => request.nextUrl.pathname.startsWith(route)
-  );
+  const isAuthRoute = [
+    '/dashboard',
+    '/log-usage',
+    '/trips',
+    '/legacy-trips',
+    '/admin',
+  ].some((route) => request.nextUrl.pathname.startsWith(route));
 
   // ถ้าเป็น API routes ให้ปล่อยผ่านไป (จะจัดการ auth ใน API handlers)
   if (request.nextUrl.pathname.startsWith('/api')) {
@@ -113,7 +116,7 @@ export async function middleware(request: NextRequest) {
       // ตรวจสอบสิทธิ์สำหรับหน้า admin (เฉพาะ admin เท่านั้น)
       if (isAdminRoute && tokenStatus.valid && !tokenStatus.expired) {
         const userRole = tokenStatus.payload?.role;
-        if (userRole !== 'admin') {
+        if (userRole !== 'ADMIN') {
           // ถ้าไม่ใช่ admin ให้ redirect ไปหน้า dashboard
           return NextResponse.redirect(
             new URL('/dashboard?access=denied', request.url)

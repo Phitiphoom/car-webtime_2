@@ -4,9 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
-import Link from 'next/link';
 import { CarIcon } from '@/components/icons/CarIcon';
 import { useAuth } from '@/hooks/useAuth';
 import { useSearchParams } from 'next/navigation';
@@ -15,7 +13,8 @@ const LoginPage = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [localError, setLocalError] = useState('');
-  const { login, isLoading, user, error } = useAuth();
+  const { login, isLoading, user } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const searchParams = useSearchParams();
   const callbackUrl = searchParams?.get('callbackUrl');
 
@@ -42,6 +41,7 @@ const LoginPage = () => {
       return;
     }
 
+    setIsSubmitting(true);
     try {
       await login(username, password);
     } catch (err) {
@@ -50,11 +50,13 @@ const LoginPage = () => {
           ? err.message
           : 'การเข้าสู่ระบบล้มเหลว กรุณาลองอีกครั้ง'
       );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   // Loading state dengan rendering bersyarat
-  if (!isClient || isLoading) {
+  if (!isClient || (isLoading && !user)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex items-center">
@@ -65,76 +67,85 @@ const LoginPage = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center justify-center">
-            <CarIcon className="h-10 w-10 text-primary" />
-            <span className="ml-2 text-2xl font-bold text-foreground">
-              SNC Car Reservation
+    <div className="flex min-h-screen items-center justify-center border-t-[3px] border-sidebar-accent bg-[hsl(36_22%_82%)] p-4 dark:bg-[hsl(28_10%_9%)]">
+      {/* The sign-in page is a sheet of paper laid on the dark desk. */}
+      <div className="relative w-full max-w-md overflow-hidden rounded-[3px] border border-foreground/30 bg-card text-card-foreground shadow-[5px_5px_0_0_hsl(var(--foreground)/0.16)]">
+        <div className="flex items-center justify-between gap-3 border-b-[3px] border-double border-foreground/30 px-6 py-4">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 items-center justify-center rounded-[3px] border-2 border-primary text-primary">
+              <CarIcon className="h-5 w-5" />
             </span>
-          </Link>
-          <h2 className="mt-6 text-3xl font-bold text-foreground">
-            เข้าสู่ระบบ
-          </h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            ใช้ข้อมูลเครือข่ายของบริษัท
-          </p>
+            <span className="leading-tight">
+              <span className="block font-mono text-[13px] font-medium tracking-[0.18em]">
+                SNC
+              </span>
+              <span className="block font-mono text-[10px] tracking-[0.14em] text-muted-foreground">
+                CAR RESERVATION
+              </span>
+            </span>
+          </div>
         </div>
 
-        <Card className="shadow-lg red-theme-card red-theme-shadow">
-          <CardContent className="pt-6">
-            <form onSubmit={handleLogin} className="space-y-4">
-              {(localError || error) && (
-                <div className="p-3 text-sm bg-destructive/10 border border-destructive/20 text-destructive rounded-md">
-                  {localError || error}
-                </div>
+        <div className="px-6 pb-6 pt-5">
+          <h2 className="text-xl font-medium">เข้าสู่ระบบ</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            ใช้ชื่อผู้ใช้และรหัสผ่านของบริษัท
+          </p>
+
+          <form onSubmit={handleLogin} className="mt-5 space-y-4">
+            {localError && (
+              <div
+                role="alert"
+                className="rounded-[3px] border border-destructive/40 border-l-4 border-l-destructive bg-destructive/5 p-3 text-sm text-destructive"
+              >
+                {localError}
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <Label htmlFor="username">ชื่อผู้ใช้</Label>
+              <Input
+                id="username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="your.username"
+                disabled={isSubmitting}
+                autoComplete="username"
+                className="w-full"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="password">รหัสผ่าน</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                disabled={isSubmitting}
+                autoComplete="current-password"
+                className="w-full"
+              />
+            </div>
+
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  กำลังเข้าสู่ระบบ...
+                </>
+              ) : (
+                'เข้าสู่ระบบ'
               )}
+            </Button>
+          </form>
+        </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="username">ชื่อผู้ใช้</Label>
-                <Input
-                  id="username"
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="your.username"
-                  disabled={isLoading}
-                  className="w-full"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password">รหัสผ่าน</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  disabled={isLoading}
-                  className="w-full"
-                />
-              </div>
-
-              <Button type="submit" className="w-full red-accent-hover transition-all duration-200" disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    กำลังเข้าสู่ระบบ...
-                  </>
-                ) : (
-                  'เข้าสู่ระบบ'
-                )}
-              </Button>
-            </form>
-          </CardContent>
-          <CardFooter className="border-t px-6 py-4 bg-muted/50">
-            <p className="text-xs text-center w-full text-muted-foreground">
-              มีปัญหาในการเข้าสู่ระบบ? กรุณาติดต่อฝ่าย IT
-            </p>
-          </CardFooter>
-        </Card>
+        <p className="border-t border-dashed border-foreground/25 px-6 py-3 text-center text-xs text-muted-foreground">
+          มีปัญหาในการเข้าสู่ระบบ? กรุณาติดต่อฝ่าย IT
+        </p>
       </div>
     </div>
   );
